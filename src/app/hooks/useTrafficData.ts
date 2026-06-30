@@ -30,7 +30,7 @@ export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
       .catch(err => console.error('Failed to load scenarios', err));
   }, []);
 
-  // 2. Fetch traffic data on date/hour change
+  // 2. Fetch traffic data on date/hour change (with automatic highest-risk selection sync)
   useEffect(() => {
     fetch(`/api/traffic?date=${date}&hour=${hour}`)
       .then(res => res.json())
@@ -39,10 +39,27 @@ export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
           setCorridors(data.corridors);
           setKpis(data.kpis);
           setCalendarContext(data.calendarContext);
+
+          // Find the active scenario's focus IDs
+          const currentScenario = scenarios.find(s => s.id === activeScenarioId);
+          const focusIds = currentScenario?.focusIds || [];
+
+          // Sort matching corridors: focus IDs first, then risk score descending
+          const sorted = [...data.corridors].sort((a, b) => {
+            const aIsFocus = focusIds.includes(a.location_id);
+            const bIsFocus = focusIds.includes(b.location_id);
+            if (aIsFocus && !bIsFocus) return -1;
+            if (!aIsFocus && bIsFocus) return 1;
+            return b.congestion_pressure_score - a.congestion_pressure_score;
+          });
+
+          if (sorted.length > 0 && onCorridorChange) {
+            onCorridorChange(sorted[0].location_id);
+          }
         }
       })
       .catch(err => console.error('Error fetching traffic data', err));
-  }, [date, hour]);
+  }, [date, hour, activeScenarioId, scenarios]);
 
   // 3. Play/Pause interval
   useEffect(() => {

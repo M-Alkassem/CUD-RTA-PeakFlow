@@ -53,6 +53,26 @@ export const AiBriefingPanel: React.FC<AiBriefingPanelProps> = ({
     ? `Reduces risk to ${mitigatedData.score} / ${mitigatedData.level}`
     : `Risk remains ${selectedCorridor.congestion_pressure_score} / ${selectedCorridor.risk_level}`;
 
+  // Consistent Roadside Advisory Text based on Risk Level & Incidents
+  const getRoadsideAdvisoryText = () => {
+    const isStorm = selectedCorridor.location_id === 'SZR_N1' || 
+                    selectedCorridor.active_incidents?.some(inc => inc.weather_condition === 'Rain' || inc.weather_condition === 'Storm');
+    const hasIncident = selectedCorridor.incident_affected;
+
+    if (hasIncident || isStorm) {
+      return 'Incident disruption ahead. Use official alternate routes and follow roadside signs.';
+    }
+
+    const score = selectedCorridor.congestion_pressure_score;
+    if (score >= 60) {
+      return 'Delays expected ahead. Consider alternate official routes and follow roadside signs.';
+    } else if (score >= 40) {
+      return 'Moderate delays possible ahead. Consider alternate official routes where available.';
+    } else {
+      return 'Traffic operating normally. Continue monitoring official roadside guidance.';
+    }
+  };
+
   return (
     <div className="detail-card animate-fade-in" id="panel-briefing" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
       
@@ -126,9 +146,7 @@ export const AiBriefingPanel: React.FC<AiBriefingPanelProps> = ({
 
           {/* 4. Official Roadside Advisory Board */}
           <RoadsideAdvisoryBoard 
-            text={briefing.publicAdvisory 
-              ? formatBriefField(briefing.publicAdvisory).replace(/^Roadside [aA]dvisory [dD]raft:?\s*/i, '').replace(/['"]/g, '') 
-              : 'RTA ROADSIDE PREVIEW'} 
+            text={getRoadsideAdvisoryText()} 
           />
 
           {/* 5. Human Approval Note Warning */}

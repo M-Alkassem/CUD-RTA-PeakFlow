@@ -73,7 +73,7 @@ export default function Page() {
     if (isStorm) {
       return {
         action: 'Official roadside advisory + incident response',
-        reason: 'Severe rain and flooding event. Deploy active emergency responders to flooded exits and advise public transport shift.'
+        reason: 'Severe rain and flooding event. Dispatch active emergency responders to flooded exits and advise public transport shift.'
       };
     }
 
@@ -101,7 +101,7 @@ export default function Page() {
       }
       return {
         action: 'Incident response + route advisory',
-        reason: 'Incident lanes blocked. Deploy emergency road patrol team and publish dynamic route rerouting via official roadside signs.'
+        reason: 'Incident lanes blocked. Dispatch emergency road patrol team and publish dynamic route rerouting via official roadside signs.'
       };
     }
 
@@ -230,7 +230,7 @@ export default function Page() {
     {
       key: 'monitor',
       title: 'Monitor Only',
-      desc: 'No dynamic prevention overrides deployed; conditions continue to be monitored.',
+      desc: 'No dynamic prevention overrides active; conditions continue to be monitored.',
       impact: null,
       icon: <Activity size={15} />
     }

@@ -143,7 +143,7 @@ export const calculateWhatIfImpact = (params: {
         riskReduction = clampVal(8 + currentRisk * 0.12, 6, 20);
         speedDeltaKph = Math.round(clampVal(4 + currentRisk * 0.08, 3, 12));
         reason = isStorm 
-          ? "Severe weather disruption. Dynamic alerts redirect traffic and deploy emergency responses to flooded blockages." 
+          ? "Severe weather disruption. Dynamic alerts redirect traffic and coordinate emergency responses to flooded blockages." 
           : "Active incident blocking lanes. Dispatching response unit and roadside sign warnings provides rapid clearing and recovery.";
       } else {
         riskReduction = clampVal(2 + currentRisk * 0.04, 1, 8);
