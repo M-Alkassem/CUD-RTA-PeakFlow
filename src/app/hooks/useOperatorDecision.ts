@@ -75,12 +75,14 @@ export function useOperatorDecision(params: {
         status: 'APPROVED'
       });
     } else if (action === 'reject') {
-      desc = `Operator rejected recommendation: ${mitigationText}`;
-      statusText = 'CANCELLED';
+      desc = `Operator dismissed recommendation: ${mitigationText}`;
+      statusText = 'DISMISSED';
+      setAppliedActions(prev => ({ ...prev, [selectedCorridor.location_id]: false }));
       setApprovedImpact(null);
     } else {
-      desc = `Requested manual engineering review for ${selectedCorridor.location_name}`;
+      desc = `Requested manual engineering review for ${selectedCorridor.road_name || selectedCorridor.location_name}`;
       statusText = 'ESCALATED';
+      setAppliedActions(prev => ({ ...prev, [selectedCorridor.location_id]: false }));
       setApprovedImpact(null);
     }
 

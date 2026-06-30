@@ -203,6 +203,15 @@ export default function Page() {
 
   const triggerDecision = (action: 'approve' | 'reject' | 'review') => {
     handleOperatorDecision(action, setAppliedActions);
+    if (selectedCorridor) {
+      if (action === 'review') {
+        alert(`Engineering Escalation: Manual review requested for ${selectedCorridor.road_name} (${selectedCorridor.direction}). The operations team has been notified.`);
+      } else if (action === 'reject') {
+        alert(`Recommendation dismissed for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`);
+      } else if (action === 'approve') {
+        alert(`Action Approved: Mitigations applied for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`);
+      }
+    }
   };
 
   // Build the What-If Options mapped to their impact variables
