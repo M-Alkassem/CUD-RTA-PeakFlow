@@ -323,7 +323,7 @@ export default function Page() {
               </div>
             )}
 
-            {activeTab === 'map' && (
+            <div style={{ display: activeTab === 'map' ? 'block' : 'none' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <LiveMapTab 
                   corridors={corridors}
@@ -332,9 +332,10 @@ export default function Page() {
                   setActiveTab={setActiveTab}
                   theme={theme}
                   appliedActions={appliedActions}
+                  activeTab={activeTab}
                 />
               </div>
-            )}
+            </div>
 
             {activeTab === 'forecast' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-forecast-actions-grid">

@@ -23,6 +23,7 @@ interface LiveMapTabProps {
   setActiveTab: (tab: ActiveTab) => void;
   theme: 'dark' | 'light';
   appliedActions: Record<string, boolean>;
+  activeTab: ActiveTab;
 }
 
 export const LiveMapTab: React.FC<LiveMapTabProps> = ({
@@ -31,7 +32,8 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({
   setSelectedLocationId,
   setActiveTab,
   theme,
-  appliedActions
+  appliedActions,
+  activeTab
 }) => {
   const selectedCorridor = corridors.find(c => c.location_id === selectedLocationId) || null;
 
@@ -44,6 +46,7 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({
         selectedLocationId={selectedLocationId}
         setSelectedLocationId={setSelectedLocationId}
         theme={theme}
+        activeTab={activeTab}
       />
 
       {/* Fallback & Tile Load Info Notice */}

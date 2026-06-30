@@ -1,20 +1,26 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { Corridor } from '../lib/types';
-import { getCoordinatesForCorridor } from '../lib/mapCoordinates';
+import { Corridor, ActiveTab } from '../lib/types';
+import { 
+  isValidDubaiCoordinate, 
+  getCoordinatesForCorridor, 
+  getValidDubaiHotspots 
+} from '../lib/mapCoordinates';
 
 interface DubaiLeafletMapProps {
   corridors: Corridor[];
   selectedLocationId: string | null;
   setSelectedLocationId: (id: string) => void;
   theme: 'dark' | 'light';
+  activeTab: ActiveTab;
 }
 
 export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   corridors,
   selectedLocationId,
   setSelectedLocationId,
-  theme
+  theme,
+  activeTab
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -22,7 +28,9 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const markerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // 1. Initialize Map Instance (Only Once)
+  const validHotspots = getValidDubaiHotspots(corridors);
+
+  // 1. Initialize Map Instance (Lock view to Dubai E11 Interchange 1)
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -31,19 +39,16 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
         center: [25.2048, 55.2708],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: true,          // Enforce canvas for performance
-        zoomAnimation: true,         // Smooth zoom animation
-        markerZoomAnimation: true,   // Smooth marker animation
-        fadeAnimation: true          // Fade transition overlays
+        preferCanvas: true,          // Boost performance
+        zoomAnimation: true,
+        markerZoomAnimation: true,
+        fadeAnimation: true
       });
 
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
-      
-      // Initialize Marker Layer Group and add to map
       markerGroupRef.current = L.layerGroup().addTo(mapRef.current);
     }
 
-    // Clean up map instance on component unmount
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
@@ -52,7 +57,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     };
   }, []);
 
-  // 2. Synchronize Map Tile Layer (Runs when theme changes)
+  // 2. Synchronize stable OpenStreetMap Tiles (Light & Dark uses OSM for absolute reliability)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -61,29 +66,54 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       map.removeLayer(tileLayerRef.current);
     }
 
-    // CARTO Dark Matter or OSM Standard Light tiles
-    const tileUrl = theme === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-    const attribution = theme === 'dark'
-      ? '&copy; <a href="https://carto.com/">CARTO</a>'
-      : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
     tileLayerRef.current = L.tileLayer(tileUrl, { 
       attribution,
-      updateWhenIdle: true,  // Optimize performance during panning
-      keepBuffer: 2          // Buffer adjacent tile grids
+      updateWhenIdle: true,
+      keepBuffer: 2
     }).addTo(map);
-  }, [theme]);
+  }, []);
 
-  // 3. Render and Update Hotspot Markers (Optimized to prevent recreating markers)
+  // 3. Fix Leaflet Tab Rendering & Viewport Size (Runs when tab becomes active)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (activeTab === 'map') {
+      setTimeout(() => {
+        // Redraw container layout sizes
+        map.invalidateSize({ animate: false });
+        
+        // Safety lock: reset viewport center if it goes out of Dubai bounds
+        const currentCenter = map.getCenter();
+        if (!isValidDubaiCoordinate(currentCenter.lat, currentCenter.lng)) {
+          map.setView([25.2048, 55.2708], 11, { animate: false });
+        }
+
+        // Fit valid hotspots to screen if available
+        if (validHotspots.length >= 2) {
+          const latLngs = validHotspots.map(h => {
+            const coords = getCoordinatesForCorridor(h.location_id);
+            return L.latLng(coords.lat, coords.lng);
+          });
+          const bounds = L.latLngBounds(latLngs);
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true });
+        } else {
+          map.setView([25.2048, 55.2708], 11, { animate: false });
+        }
+      }, 150);
+    }
+  }, [activeTab]);
+
+  // 4. Render Simple, Performant Markers (No heavy layout box-shadow pulsing, matches risk score colors)
   useEffect(() => {
     const map = mapRef.current;
     const markerGroup = markerGroupRef.current;
     if (!map || !markerGroup) return;
 
-    corridors.forEach(cor => {
+    validHotspots.forEach(cor => {
       const coords = getCoordinatesForCorridor(cor.location_id);
       const score = cor.congestion_pressure_score;
       
@@ -94,6 +124,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       else if (score >= 40) { riskClass = 'risk-medium'; riskLevel = 'Medium'; }
 
       const isSelected = cor.location_id === selectedLocationId;
+      // Class styling uses color states and selected overlays without heavy animations
       const className = `custom-leaflet-marker ${riskClass} ${isSelected ? 'selected' : ''}`;
 
       const icon = L.divIcon({
@@ -126,11 +157,9 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       const existingMarker = markersRef.current[cor.location_id];
 
       if (existingMarker) {
-        // Highly Optimized: Just update icon and popup instead of re-instantiating Marker
         existingMarker.setIcon(icon);
         existingMarker.setPopupContent(popupHtml);
       } else {
-        // Instantiate and add to marker group
         const marker = L.marker([coords.lat, coords.lng], { icon })
           .addTo(markerGroup)
           .bindPopup(popupHtml, { closeButton: false, offset: [0, -10] });
@@ -143,18 +172,18 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       }
     });
 
-    // Remove any markers from coordinates that are no longer active in corridors list
-    const corridorIds = new Set(corridors.map(c => c.location_id));
+    // Remove any markers from coordinates that are no longer active
+    const activeIds = new Set(validHotspots.map(c => c.location_id));
     Object.keys(markersRef.current).forEach(locId => {
-      if (!corridorIds.has(locId)) {
+      if (!activeIds.has(locId)) {
         const marker = markersRef.current[locId];
         markerGroup.removeLayer(marker);
         delete markersRef.current[locId];
       }
     });
-  }, [corridors]);
+  }, [corridors, selectedLocationId]);
 
-  // 4. Lightweight Selection Class Syncing (Direct DOM manipulation to prevent lag)
+  // 5. Marker Selection Pan and Popup Handling
   useEffect(() => {
     Object.entries(markersRef.current).forEach(([locId, marker]) => {
       const isSelected = locId === selectedLocationId;
@@ -163,11 +192,9 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       if (element) {
         if (isSelected) {
           element.classList.add('selected');
-          // Smooth pan to active marker coords
           const coords = getCoordinatesForCorridor(locId);
           mapRef.current?.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 });
           
-          // Open popup safely
           setTimeout(() => {
             if (marker.getPopup() && !marker.getPopup()?.isOpen()) {
               marker.openPopup();
@@ -180,7 +207,6 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     });
   }, [selectedLocationId]);
 
-  // Viewport action overlay functions
   const handleResetView = () => {
     if (mapRef.current) {
       mapRef.current.setView([25.2048, 55.2708], 11, { animate: true });
@@ -191,39 +217,49 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
-    const latLngs = corridors.map(cor => {
-      const coords = getCoordinatesForCorridor(cor.location_id);
-      return L.latLng(coords.lat, coords.lng);
-    });
-
-    if (latLngs.length > 0) {
+    if (validHotspots.length >= 2) {
+      const latLngs = validHotspots.map(h => {
+        const coords = getCoordinatesForCorridor(h.location_id);
+        return L.latLng(coords.lat, coords.lng);
+      });
       const bounds = L.latLngBounds(latLngs);
-      map.fitBounds(bounds, { padding: [50, 50], animate: true });
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true });
+    } else {
+      map.setView([25.2048, 55.2708], 11, { animate: true });
     }
   };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
-      {/* Map Target Element */}
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} id="dubai-leaflet-map" />
+      
+      {/* Empty State Banner Handling */}
+      {validHotspots.length === 0 ? (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)', color: 'var(--color-critical)', fontSize: '15px', fontWeight: 600 }}>
+          ⚠️ No valid Dubai hotspot coordinates found. Check mapCoordinates.ts.
+        </div>
+      ) : (
+        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} id="dubai-leaflet-map" />
+      )}
 
-      {/* Floating Controls Overlays */}
-      <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 1000, display: 'flex', gap: '8px' }}>
-        <button 
-          onClick={handleResetView}
-          className="map-control-wide-btn"
-          style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
-        >
-          Reset View
-        </button>
-        <button 
-          onClick={handleFitHotspots}
-          className="map-control-wide-btn"
-          style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
-        >
-          Fit Hotspots
-        </button>
-      </div>
+      {/* Floating View Controls */}
+      {validHotspots.length > 0 && (
+        <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 1000, display: 'flex', gap: '8px' }}>
+          <button 
+            onClick={handleResetView}
+            className="map-control-wide-btn"
+            style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
+          >
+            Reset View
+          </button>
+          <button 
+            onClick={handleFitHotspots}
+            className="map-control-wide-btn"
+            style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
+          >
+            Fit Hotspots
+          </button>
+        </div>
+      )}
 
       {/* Sandbox Honesty Banner */}
       <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 1000, background: 'rgba(15, 23, 42, 0.85)', color: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, border: '1px solid rgba(255,255,255,0.1)' }}>

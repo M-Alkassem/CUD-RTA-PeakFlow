@@ -154,11 +154,32 @@ export const dubaiCorridorCoordinates: MapCoordinateEntry[] = [
   }
 ];
 
+// Helper to validate coordinate is strictly within Dubai bounding box
+export const isValidDubaiCoordinate = (lat: number | undefined | null, lng: number | undefined | null): boolean => {
+  if (lat === undefined || lat === null || lng === undefined || lng === null) return false;
+  if (isNaN(lat) || isNaN(lng)) return false;
+  return lat >= 24.70 && lat <= 25.45 && lng >= 54.80 && lng <= 56.00;
+};
+
+// Helper to retrieve coordinate with validated fallback
 export const getCoordinatesForCorridor = (locationId: string): { lat: number; lng: number } => {
   const match = dubaiCorridorCoordinates.find(c => c.location_id === locationId);
-  if (match) {
+  if (match && isValidDubaiCoordinate(match.latitude, match.longitude)) {
     return { lat: match.latitude, lng: match.longitude };
   }
   // TODO: replace fallback coordinate with verified corridor coordinate
   return { lat: 25.2048, lng: 55.2708 };
+};
+
+// Retrieve a guaranteed valid coordinate or null
+export const getValidDubaiCoordinate = (locationId: string): { lat: number; lng: number } => {
+  return getCoordinatesForCorridor(locationId);
+};
+
+// Filter corridors to only return ones with valid coordinates
+export const getValidDubaiHotspots = (corridors: any[]): any[] => {
+  return corridors.filter(c => {
+    const coords = getCoordinatesForCorridor(c.location_id);
+    return isValidDubaiCoordinate(coords.lat, coords.lng);
+  });
 };
