@@ -256,42 +256,42 @@ export default function Page() {
         <section className="panel" style={{ overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-main)' }} id="main-telemetry-content">
           
           {/* 1. Page Header with Title, Subtitle, and Clock controllers */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px', gap: '20px' }}>
             <div>
-              <h2 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
                 PeakFlow Operations Dashboard
               </h2>
-              <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
+              <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
                 Predict congestion, compare prevention options, and prepare AI-assisted operator briefings.
               </p>
             </div>
             
             {/* Clock Replay Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="status-badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '6px', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+              <div className="status-badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', padding: '0 16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 Replay: {String(hour).padStart(2, '0')}:00
               </div>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)} 
                 className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
-                style={{ padding: '8px 16px', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '6px' }}
+                style={{ padding: '0 18px', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', borderRadius: '8px', height: '42px', border: 'none' }}
               >
-                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                {isPlaying ? <Pause size={15} /> : <Play size={15} />}
                 {isPlaying ? 'Pause Feed' : 'Start Feed'}
               </button>
               <button 
                 onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
                 className="btn-action secondary"
-                style={{ padding: '8px 16px', fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+                style={{ padding: '0 18px', fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', height: '42px' }}
               >
-                <SkipForward size={14} /> +1 Hr Tick
+                <SkipForward size={15} /> +1 Hr Tick
               </button>
               
               {/* Play Speed selector dropdown */}
               <select 
                 value={playSpeed} 
                 onChange={(e) => setPlaySpeed(Number(e.target.value))}
-                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '6px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', height: '42px', display: 'flex', alignItems: 'center' }}
               >
                 <option value={8}>Speed: 8s</option>
                 <option value={4}>Speed: 4s</option>
@@ -530,7 +530,7 @@ export default function Page() {
                       </p>
 
                       {/* Compare Mitigation list */}
-                      <div className="mitigation-stack" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div className="mitigation-stack" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {simulatorOptions.map(opt => {
                           const isSelected = activeMitigationKey === opt.key;
                           const isRecommended = opt.key === recommendedSimKey;
@@ -543,7 +543,7 @@ export default function Page() {
                           if (isRecommended) {
                             labelText = 'Recommended';
                             labelColor = 'var(--color-low)';
-                            labelBg = 'rgba(40, 167, 69, 0.1)';
+                            labelBg = 'rgba(34, 197, 94, 0.1)';
                           } else if (isMonitor) {
                             labelText = 'Baseline';
                             labelColor = 'var(--text-secondary)';
@@ -559,25 +559,25 @@ export default function Page() {
                               key={opt.key}
                               onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId || '']: opt.key }))}
                               className={`mitigation-action-card ${isSelected ? 'active' : ''} ${isRecommended ? 'recommended-row' : ''}`}
-                              style={{ padding: '12px', cursor: 'pointer', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'all 0.2s ease', position: 'relative' }}
+                              style={{ padding: '16px 20px', cursor: 'pointer', borderRadius: '12px', border: '1px solid var(--border-color)', transition: 'all 0.2s ease', position: 'relative' }}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
                                   <input
                                     type="radio"
                                     name="mitigation"
                                     checked={isSelected}
                                     onChange={() => {}}
-                                    style={{ width: '18px', height: '18px' }}
+                                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
                                   />
-                                  <div>
-                                    <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                       {opt.icon} {opt.title}
-                                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: labelBg, color: labelColor, fontWeight: 700 }}>
+                                      <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '4px', background: labelBg, color: labelColor, fontWeight: 700 }}>
                                         {labelText}
                                       </span>
                                     </div>
-                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: 1.4 }}>
                                       {opt.desc}
                                     </div>
                                   </div>
@@ -586,26 +586,26 @@ export default function Page() {
 
                               {/* Render impact projections if not monitor */}
                               {!isMonitor && opt.impact && (
-                                <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                    <strong>Projection Efficacy:</strong> {opt.impact.reason}
+                                <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                    <strong>Efficacy Analysis:</strong> {opt.impact.reason}
                                   </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '6px' }}>
-                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Projected Risk</span>
-                                      <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '14px', marginTop: '8px' }}>
+                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Projected Risk</span>
+                                      <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
                                         {opt.impact.afterRisk} ({opt.impact.afterLevel})
                                       </strong>
                                     </div>
-                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Speed Delta</span>
-                                      <strong style={{ fontSize: '13px', color: 'var(--color-low)' }}>
+                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Speed Delta</span>
+                                      <strong style={{ fontSize: '14px', color: 'var(--color-low)' }}>
                                         {opt.impact.speedDeltaKph > 0 ? `+${opt.impact.speedDeltaKph}` : '0'} kph
                                       </strong>
                                     </div>
-                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
-                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Volume Delta</span>
-                                      <strong style={{ fontSize: '13px', color: opt.impact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
+                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Volume Delta</span>
+                                      <strong style={{ fontSize: '14px', color: opt.impact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
                                         {opt.impact.volumeDeltaVph} vph
                                       </strong>
                                     </div>
@@ -619,8 +619,8 @@ export default function Page() {
 
                       {/* Mitigated Scenario Target Projection (Expected Impact Preview) */}
                       {mitigatedData && (
-                        <div className="detail-card animate-fade-in" style={{ padding: '16px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '10px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-title)', marginBottom: '6px' }}>
+                        <div className="detail-card animate-fade-in" style={{ padding: '20px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '16px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-title)', marginBottom: '8px' }}>
                             Mitigated Scenario Target Projection
                           </div>
                           <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
