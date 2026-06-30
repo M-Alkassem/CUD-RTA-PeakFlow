@@ -186,14 +186,55 @@ export default function Page() {
     mitigatedData
   });
 
-  const mapPanZoom = useMapPanZoom({
-    selectedLocationId,
-    activeScenario
-  });
-
   const triggerDecision = (action: 'approve' | 'reject' | 'review') => {
     handleOperatorDecision(action, setAppliedActions);
   };
+
+  // Build the What-If Options mapped to their impact variables
+  const simulatorOptions = [
+    {
+      key: 'route-advisory',
+      title: 'Route Advisory',
+      desc: 'Diverts incoming volume to alternative bridges using official roadside signs.',
+      impact: routeImpact,
+      icon: <Compass size={15} />
+    },
+    {
+      key: 'signal-timing',
+      title: 'Signal Timing Review',
+      desc: 'Alters green timing split profiles at Defence intersection approaches.',
+      impact: signalImpact,
+      icon: <Sliders size={15} />
+    },
+    {
+      key: 'metro-riders',
+      title: 'Public Transport Advisory',
+      desc: 'Publishes app alerts advising metro ridership shifts to clear roadway volume.',
+      impact: metroImpact,
+      icon: <Train size={15} />
+    },
+    {
+      key: 'salik-shift',
+      title: 'Off-Peak Demand Shift',
+      desc: 'Advertises dynamic pricing shifts to redirect non-essential commute timings.',
+      impact: salikImpact,
+      icon: <Sliders size={15} />
+    },
+    {
+      key: 'incident-response',
+      title: 'Incident Response',
+      desc: 'Dispatches RTA emergency patrol units to clear blocked lanes.',
+      impact: incidentImpact,
+      icon: <Zap size={15} />
+    },
+    {
+      key: 'monitor',
+      title: 'Monitor Only',
+      desc: 'No dynamic prevention overrides deployed; conditions continue to be monitored.',
+      impact: null,
+      icon: <Activity size={15} />
+    }
+  ];
 
   return (
     <div className="app-container">
@@ -283,73 +324,182 @@ export default function Page() {
             )}
 
             {activeTab === 'map' && (
-              <LiveMapTab 
-                corridors={corridors}
-                selectedLocationId={selectedLocationId}
-                setSelectedLocationId={setSelectedLocationId}
-                setActiveTab={setActiveTab}
-                theme={theme}
-                appliedActions={appliedActions}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <LiveMapTab 
+                  corridors={corridors}
+                  selectedLocationId={selectedLocationId}
+                  setSelectedLocationId={setSelectedLocationId}
+                  setActiveTab={setActiveTab}
+                  theme={theme}
+                  appliedActions={appliedActions}
+                />
+              </div>
             )}
 
             {activeTab === 'forecast' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-forecast-actions-grid">
-                {/* Left side: Telemetry details */}
+                
+                {/* Left side: Hotspot Summary & Telemetry/24-Hr Speed Profile */}
                 <div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-title)' }}>
-                    Corridor Live Metrics
-                  </div>
-                  <CorridorDetails 
-                    selectedCorridor={selectedCorridor}
-                    selectedLocationId={selectedLocationId}
-                    appliedActions={appliedActions}
-                    mitigatedData={mitigatedData}
-                    activeScenarioId={activeScenarioId}
-                    corridors={corridors}
-                    setSelectedLocationId={setSelectedLocationId}
-                    alternatives={alternatives}
-                    junctionPerformance={junctionPerformance}
-                  />
+                  {selectedCorridor ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      
+                      {/* 1. Hotspot Summary Card */}
+                      <div className="detail-card" style={{ padding: '20px' }}>
+                        <h3 style={{ fontSize: '20px', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '12px', color: 'var(--text-title)' }}>
+                          Selected Corridor Summary
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
+                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Location</div>
+                            <strong style={{ fontSize: '18px', color: 'var(--text-primary)' }}>{selectedCorridor.road_name} ({selectedCorridor.direction})</strong>
+                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>Area: {selectedCorridor.area} · {selectedCorridor.num_lanes} Lanes</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Current Risk Level</div>
+                            <span style={{ fontSize: '18px', fontWeight: 800, color: selectedCorridor.congestion_pressure_score >= 80 ? 'var(--color-critical)' : selectedCorridor.congestion_pressure_score >= 60 ? 'var(--color-high)' : selectedCorridor.congestion_pressure_score >= 40 ? 'var(--color-medium)' : 'var(--color-low)' }}>
+                              {selectedCorridor.congestion_pressure_score} / 100 ({selectedCorridor.risk_level})
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Avg Speed:</span>
+                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.avg_speed_kph} kph</strong>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>V/C Ratio:</span>
+                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.vc_ratio.toFixed(2)}x</strong>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Travel Time Index:</span>
+                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.travel_time_index.toFixed(2)}x</strong>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '14px' }}>
+                          <div><strong>Main Cause:</strong> {selectedCorridor.incident_affected ? 'Active lane-blocking traffic collision' : 'Peak commuter rush hour volume'}</div>
+                          <div style={{ marginTop: '4px' }}><strong>Recommended:</strong> <span style={{ color: 'var(--rta-blue)', fontWeight: 700 }}>{selectedRecommendation.action}</span></div>
+                        </div>
+                      </div>
+
+                      {/* 2. 24-Hour Speed Profile Line Chart */}
+                      {selectedCorridor.speedHistory && selectedCorridor.speedHistory.length > 0 && (
+                        <div className="detail-card" style={{ padding: '20px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-title)', fontSize: '18px', display: 'block', marginBottom: '12px' }}>
+                            24-Hour Speed Profile (kph)
+                          </span>
+                          <div style={{ background: 'var(--bg-main)', padding: '16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                            <svg viewBox="0 0 500 120" style={{ width: '100%', height: '120px' }}>
+                              {/* Grid lines */}
+                              <line x1="0" y1="20" x2="500" y2="20" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
+                              <line x1="0" y1="60" x2="500" y2="60" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
+                              <line x1="0" y1="100" x2="500" y2="100" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
+                              
+                              <path
+                                d={selectedCorridor.speedHistory.map((s, idx) => {
+                                  const x = (idx / (selectedCorridor.speedHistory.length - 1)) * 500;
+                                  const y = 110 - (s / 100) * 90;
+                                  return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                }).join(' ')}
+                                fill="none"
+                                stroke="var(--rta-blue)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+
+                              {/* Simulation Current Hour dot */}
+                              {(() => {
+                                const h = hour % selectedCorridor.speedHistory.length;
+                                const x = (h / (selectedCorridor.speedHistory.length - 1)) * 500;
+                                const s = selectedCorridor.speedHistory[h] || 60;
+                                const y = 110 - (s / 100) * 90;
+                                return (
+                                  <g>
+                                    <circle cx={x} cy={y} r="6" fill="var(--rta-red)" />
+                                    <circle cx={x} cy={y} r="12" fill="none" stroke="var(--rta-red)" strokeWidth="1.5" style={{ opacity: 0.5 }} />
+                                  </g>
+                                );
+                              })()}
+                            </svg>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                              <span>00:00</span>
+                              <span style={{ color: 'var(--rta-red)', fontWeight: 600 }}>TOC Hour ({String(hour).padStart(2, '0')}:00)</span>
+                              <span>23:00</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. Nearby intersection telemetry */}
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-title)' }}>
+                          Junction & Alternate Route Telemetry
+                        </div>
+                        <CorridorDetails 
+                          selectedCorridor={selectedCorridor}
+                          selectedLocationId={selectedLocationId}
+                          appliedActions={appliedActions}
+                          mitigatedData={mitigatedData}
+                          activeScenarioId={activeScenarioId}
+                          corridors={corridors}
+                          setSelectedLocationId={setSelectedLocationId}
+                          alternatives={alternatives}
+                          junctionPerformance={junctionPerformance}
+                        />
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                      No corridor selected. Please select a hotspot.
+                    </div>
+                  )}
                 </div>
 
-                {/* Right side: AI Forecast + Simulator */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {/* Explainable AI Forecast details */}
-                  {selectedLocationId && selectedCorridor?.forecast && (
-                    <div className="detail-card animate-fade-in" style={{ padding: '20px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
-                        Explainable AI Forecast
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Predictive Window:</span>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Next 30–60 Minutes</span>
+                {/* Right side: AI Forecast & What-If Simulator */}
+                {selectedCorridor && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    
+                    {/* Explainable AI Forecast details */}
+                    {selectedCorridor.forecast && (
+                      <div className="detail-card animate-fade-in" style={{ padding: '20px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
+                          Explainable AI Forecast
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
-                          <span style={{ fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast.forecast_confidence}%</span>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Top Contributing Factors:</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {selectedCorridor.forecast.topContributingFeatures.map((f: string, idx: number) => (
-                              <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '13px', padding: '4px 10px', borderRadius: '4px' }}>
-                                {f}
-                              </span>
-                            ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Predictive Window:</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Next 30–60 Minutes</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
+                            <span style={{ fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast.forecast_confidence}%</span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Top Contributing Factors:</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {selectedCorridor.forecast.topContributingFeatures.map((f: string, idx: number) => (
+                                <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '13px', padding: '4px 10px', borderRadius: '4px' }}>
+                                  {f}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '6px' }}>
+                            * Simulation estimate based on current corridor telemetry and sandbox data.
                           </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* What-If Simulator */}
-                  {selectedLocationId && selectedCorridor ? (
-                    <div className="detail-card" id="section-e-whatif" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px' }}>
+                    {/* What-If Simulator Options Stack */}
+                    <div className="detail-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span className="kpi-title" style={{ fontSize: '18px', fontWeight: 700 }}>What-If Prevention Simulator</span>
-                        {appliedActions[selectedLocationId] && (
+                        {appliedActions[selectedLocationId || ''] && (
                           <span className="badge-risk low" style={{ fontSize: '12px', padding: '2px 8px' }}>Action split active</span>
                         )}
                       </div>
@@ -361,267 +511,92 @@ export default function Page() {
                         {selectedRecommendation.reason}
                       </p>
 
+                      {/* Compare Mitigation list */}
                       <div className="mitigation-stack" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {/* Option 1: Route Advisory */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'route-advisory' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'route-advisory' ? 'active' : ''} ${recommendedSimKey === 'route-advisory' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'route-advisory'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Compass size={14} className="text-primary" /> Route Advisory
-                                {recommendedSimKey === 'route-advisory' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Diverts incoming volume to alternative bridges using signs.
-                              </div>
-                            </div>
-                          </div>
-                          {activeMitigationKey === 'route-advisory' && routeImpact && (
-                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Projection Impact: <strong style={{ color: routeImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{routeImpact.reason}</strong>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{routeImpact.afterRisk} ({routeImpact.afterLevel})</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{routeImpact.speedDeltaKph} kph</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Demand shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{routeImpact.volumeDeltaVph} vph</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        {simulatorOptions.map(opt => {
+                          const isSelected = activeMitigationKey === opt.key;
+                          const isRecommended = opt.key === recommendedSimKey;
+                          const isMonitor = opt.key === 'monitor';
+                          
+                          let labelText = 'Useful';
+                          let labelColor = 'var(--rta-blue)';
+                          let labelBg = 'var(--rta-blue-bg)';
+                          
+                          if (isRecommended) {
+                            labelText = 'Recommended';
+                            labelColor = 'var(--color-low)';
+                            labelBg = 'rgba(40, 167, 69, 0.1)';
+                          } else if (isMonitor) {
+                            labelText = 'Baseline';
+                            labelColor = 'var(--text-secondary)';
+                            labelBg = 'var(--border-color)';
+                          } else if (opt.impact && !opt.impact.applicable) {
+                            labelText = 'Limited Impact';
+                            labelColor = '#fd7e14';
+                            labelBg = 'rgba(253, 126, 20, 0.1)';
+                          }
 
-                        {/* Option 2: Signal Split */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'signal-timing' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'signal-timing' ? 'active' : ''} ${recommendedSimKey === 'signal-timing' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'signal-timing'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Sliders size={14} className="text-primary" /> Signal Timing Review
-                                {recommendedSimKey === 'signal-timing' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Alters green timing split profiles at Defence intersection approaches.
-                              </div>
-                            </div>
-                          </div>
-                          {activeMitigationKey === 'signal-timing' && signalImpact && (
-                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Projection Impact: <strong style={{ color: signalImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{signalImpact.reason}</strong>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{signalImpact.afterRisk} ({signalImpact.afterLevel})</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Delay delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{signalImpact.delayDeltaSeconds}s / veh</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Approach speed</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{signalImpact.speedDeltaKph} kph</div>
+                          return (
+                            <div 
+                              key={opt.key}
+                              onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId || '']: opt.key }))}
+                              className={`mitigation-action-card ${isSelected ? 'active' : ''} ${isRecommended ? 'recommended-row' : ''}`}
+                              style={{ padding: '12px', cursor: 'pointer', borderRadius: '8px', border: '1px solid var(--border-color)', transition: 'all 0.2s ease', position: 'relative' }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <input
+                                    type="radio"
+                                    name="mitigation"
+                                    checked={isSelected}
+                                    onChange={() => {}}
+                                    style={{ width: '18px', height: '18px' }}
+                                  />
+                                  <div>
+                                    <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      {opt.icon} {opt.title}
+                                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', background: labelBg, color: labelColor, fontWeight: 700 }}>
+                                        {labelText}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                      {opt.desc}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
 
-                        {/* Option 3: Metro riders */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'metro-riders' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'metro-riders' ? 'active' : ''} ${recommendedSimKey === 'metro-riders' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'metro-riders'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Train size={14} className="text-primary" /> Public Transport Advisory
-                                {recommendedSimKey === 'metro-riders' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Publishes app alerts advising metro ridership split updates.
-                              </div>
+                              {/* Render impact projections if not monitor */}
+                              {!isMonitor && opt.impact && (
+                                <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    <strong>Projection Efficacy:</strong> {opt.impact.reason}
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '6px' }}>
+                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
+                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Projected Risk</span>
+                                      <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                                        {opt.impact.afterRisk} ({opt.impact.afterLevel})
+                                      </strong>
+                                    </div>
+                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
+                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Speed Delta</span>
+                                      <strong style={{ fontSize: '13px', color: 'var(--color-low)' }}>
+                                        {opt.impact.speedDeltaKph > 0 ? `+${opt.impact.speedDeltaKph}` : '0'} kph
+                                      </strong>
+                                    </div>
+                                    <div style={{ background: 'var(--bg-main)', padding: '6px 8px', borderRadius: '4px', textAlign: 'center' }}>
+                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Volume Delta</span>
+                                      <strong style={{ fontSize: '13px', color: opt.impact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
+                                        {opt.impact.volumeDeltaVph} vph
+                                      </strong>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          {activeMitigationKey === 'metro-riders' && metroImpact && (
-                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Projection Impact: <strong style={{ color: 'var(--color-low)' }}>{metroImpact.reason}</strong>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{metroImpact.afterRisk} ({metroImpact.afterLevel})</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{metroImpact.speedDeltaKph} kph</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Volume shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{metroImpact.volumeDeltaVph} vph</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Option 4: Salik pricing dynamic pricing shift */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'salik-shift' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'salik-shift' ? 'active' : ''} ${recommendedSimKey === 'salik-shift' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'salik-shift'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Sliders size={14} className="text-primary" /> Off-Peak Demand Shift
-                                {recommendedSimKey === 'salik-shift' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Advertises dynamic pricing shifts to clear congestion timings.
-                              </div>
-                            </div>
-                          </div>
-                          {activeMitigationKey === 'salik-shift' && salikImpact && (
-                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Projection Impact: <strong style={{ color: 'var(--color-low)' }}>{salikImpact.reason}</strong>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{salikImpact.afterRisk} ({salikImpact.afterLevel})</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{salikImpact.speedDeltaKph} kph</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Volume shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{salikImpact.volumeDeltaVph} vph</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Option 5: Incident emergency responders */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'incident-response' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'incident-response' ? 'active' : ''} ${recommendedSimKey === 'incident-response' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'incident-response'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Zap size={14} className="text-primary" /> Incident Response
-                                {recommendedSimKey === 'incident-response' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Dispatches RTA emergency patrol units to clear blocked lanes.
-                              </div>
-                            </div>
-                          </div>
-                          {activeMitigationKey === 'incident-response' && incidentImpact && (
-                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                Projection Impact: <strong style={{ color: incidentImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{incidentImpact.reason}</strong>
-                              </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{incidentImpact.afterRisk} ({incidentImpact.afterLevel})</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{incidentImpact.speedDeltaKph} kph</div>
-                                </div>
-                                <div className="telemetry-item" style={{ padding: '6px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Road status</div>
-                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>Quick clear</div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Option 6: Monitor Only */}
-                        <div 
-                          onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'monitor' }))}
-                          className={`mitigation-action-card ${activeMitigationKey === 'monitor' ? 'active' : ''} ${recommendedSimKey === 'monitor' ? 'recommended-row' : ''}`}
-                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <input
-                              type="radio"
-                              name="mitigation"
-                              checked={activeMitigationKey === 'monitor'}
-                              onChange={() => {}}
-                              style={{ width: '16px', height: '16px' }}
-                            />
-                            <div>
-                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
-                                <Activity size={14} className="text-primary" /> Monitor Only
-                                {recommendedSimKey === 'monitor' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
-                              </div>
-                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                No dynamic actions are deployed at this time.
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })}
                       </div>
 
                       {/* Mitigated Scenario Target Projection (Expected Impact Preview) */}
@@ -635,13 +610,11 @@ export default function Page() {
                           </div>
                         </div>
                       )}
+
                     </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
-                      No corridor selected.
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
               </div>
             )}
 
