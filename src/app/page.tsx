@@ -67,7 +67,7 @@ export default function Page() {
     corridors,
     kpis,
     calendarContext,
-    activeScenario,
+    activeScenario: currentScenario,
     sortedCorridors,
     handleLaunchScenario
   } = useTrafficData(selectedLocationId, (newId) => {
@@ -168,7 +168,7 @@ export default function Page() {
   } = useWhatIfSimulator({
     selectedCorridor,
     corridors,
-    activeScenario,
+    activeScenario: currentScenario,
     date,
     hour,
     selectedRecommendation
@@ -193,7 +193,7 @@ export default function Page() {
   } = useOperatorDecision({
     selectedCorridor,
     activeMitigationKey,
-    activeScenario,
+    activeScenario: currentScenario,
     date,
     hour,
     corridors,
