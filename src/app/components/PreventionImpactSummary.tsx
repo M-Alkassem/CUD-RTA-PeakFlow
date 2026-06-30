@@ -11,31 +11,39 @@ export const PreventionImpactSummary: React.FC<PreventionImpactSummaryProps> = (
 
   return (
     <div className="animate-fade-in" style={{ 
-      background: 'rgba(16, 185, 129, 0.08)', 
-      border: '1px solid rgba(16, 185, 129, 0.25)', 
-      padding: '10px 12px', 
-      borderRadius: '6px' 
+      background: 'rgba(40, 167, 69, 0.08)', 
+      border: '1px solid rgba(40, 167, 69, 0.25)', 
+      padding: '16px 20px', 
+      borderRadius: '8px' 
     }} id="prevention-impact-summary">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-low)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <CheckCircle size={12} /> Prevention Impact Summary
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-low)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <CheckCircle size={16} /> Prevention Impact Summary
         </span>
-        <span className="badge-risk low" style={{ fontSize: '8px', padding: '1px 5px', color: 'var(--color-low)', border: '1px solid var(--color-low)', background: 'transparent' }}>
+        <span className="badge-risk low" style={{ fontSize: '13px', padding: '2px 8px', color: 'var(--color-low)', border: '1px solid var(--color-low)', background: 'transparent' }}>
           {approvedImpact.status}
         </span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '9.5px', color: 'var(--text-primary)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '15px', color: 'var(--text-primary)' }}>
         <div>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Before Risk Score:</span> {approvedImpact.beforeScore} / {approvedImpact.beforeLevel}
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Before Risk Score:</span>{' '}
+          <strong>{approvedImpact.beforeScore} / {approvedImpact.beforeLevel}</strong>
         </div>
         <div>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Approved Action:</span> {approvedImpact.approvedAction}
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Approved Action:</span>{' '}
+          <strong>{approvedImpact.approvedAction}</strong>
         </div>
-        <div style={{ gridColumn: 'span 2' }}>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Expected Impact:</span> {approvedImpact.expectedImpact}
+        <div>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Expected Impact:</span>{' '}
+          <strong>{approvedImpact.expectedImpact}</strong>
         </div>
-        <div style={{ gridColumn: 'span 2' }}>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Main Reason:</span> {approvedImpact.mainReason}
+        <div>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Main Reason:</span>{' '}
+          <strong>{approvedImpact.mainReason}</strong>
+        </div>
+        <div>
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Decision Status:</span>{' '}
+          <strong style={{ color: 'var(--color-low)' }}>{approvedImpact.status}</strong>
         </div>
       </div>
     </div>

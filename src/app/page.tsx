@@ -629,6 +629,8 @@ export default function Page() {
                     handleOperatorDecision={triggerDecision}
                     formatBriefField={formatBriefField}
                     buildSafeSituationSummary={buildSafeSituationSummary}
+                    activeMitigationKey={activeMitigationKey}
+                    mitigatedData={mitigatedData}
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
