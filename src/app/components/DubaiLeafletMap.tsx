@@ -22,7 +22,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   theme,
   activeTab
 }) => {
-  const [viewMode, setViewMode] = useState<'tactical' | 'gis'>('tactical');
+  const [viewMode, setViewMode] = useState<'tactical' | 'gis'>('gis');
 
   // Leaflet Refs
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -50,9 +50,11 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
 
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
       
-      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
       tileLayerRef.current = L.tileLayer(tileUrl, { 
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
         updateWhenIdle: true,
         keepBuffer: 2
       }).addTo(mapRef.current);
