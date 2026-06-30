@@ -538,116 +538,122 @@ export default function Page() {
                     )}
 
                     {/* What-If Simulator Options Stack */}
-                    <div className="detail-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="detail-card" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="kpi-title" style={{ fontSize: '18px', fontWeight: 700 }}>What-If Prevention Simulator</span>
+                        <span className="kpi-title" style={{ fontSize: '16px', fontWeight: 750 }}>What-If Prevention Simulator</span>
                         {appliedActions[selectedLocationId || ''] && (
-                          <span className="badge-risk low" style={{ fontSize: '12px', padding: '2px 8px' }}>Action split active</span>
+                          <span className="badge-risk low" style={{ fontSize: '11px', padding: '2px 6px' }}>Action split active</span>
                         )}
                       </div>
 
-                      <div className="recommend-badge" style={{ marginBottom: '4px', fontSize: '14px', padding: '6px 12px' }}>
+                      <div className="recommend-badge" style={{ marginBottom: '2px', fontSize: '13px', padding: '4px 8px' }}>
                         Recommended Option: {selectedRecommendation.action}
                       </div>
-                      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '8px' }}>
-                        {selectedRecommendation.reason}
-                      </p>
 
-                      {/* Compare Mitigation list */}
-                      <div className="mitigation-stack" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* Compact Mitigation selector tiles grid */}
+                      <div className="mitigation-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                         {simulatorOptions.map(opt => {
                           const isSelected = activeMitigationKey === opt.key;
                           const isRecommended = opt.key === recommendedSimKey;
-                          const isMonitor = opt.key === 'monitor';
                           
-                          let labelText = 'Useful';
-                          let labelColor = 'var(--rta-blue)';
-                          let labelBg = 'var(--rta-blue-bg)';
-                          
-                          if (isRecommended) {
-                            labelText = 'Recommended';
-                            labelColor = 'var(--color-low)';
-                            labelBg = 'rgba(34, 197, 94, 0.1)';
-                          } else if (isMonitor) {
-                            labelText = 'Baseline';
-                            labelColor = 'var(--text-secondary)';
-                            labelBg = 'var(--border-color)';
-                          } else if (opt.impact && !opt.impact.applicable) {
-                            labelText = 'Limited Impact';
-                            labelColor = '#fd7e14';
-                            labelBg = 'rgba(253, 126, 20, 0.1)';
-                          }
+                          let borderStyle = '1px solid var(--border-color)';
+                          if (isSelected) borderStyle = '2px solid var(--rta-blue)';
+                          else if (isRecommended) borderStyle = '1px dashed var(--color-low)';
 
                           return (
-                            <div 
+                            <div
                               key={opt.key}
                               onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId || '']: opt.key }))}
-                              className={`mitigation-action-card ${isSelected ? 'active' : ''} ${isRecommended ? 'recommended-row' : ''}`}
-                              style={{ padding: '16px 20px', cursor: 'pointer', borderRadius: '12px', border: '1px solid var(--border-color)', transition: 'all 0.2s ease', position: 'relative' }}
+                              style={{
+                                background: isSelected ? 'var(--rta-blue-bg)' : 'var(--bg-card)',
+                                border: borderStyle,
+                                borderRadius: '8px',
+                                padding: '10px 6px',
+                                cursor: 'pointer',
+                                textAlign: 'center',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              className={`mitigation-tile ${isSelected ? 'active' : ''}`}
                             >
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
-                                  <input
-                                    type="radio"
-                                    name="mitigation"
-                                    checked={isSelected}
-                                    onChange={() => {}}
-                                    style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
-                                  />
-                                  <div style={{ minWidth: 0, flex: 1 }}>
-                                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-title)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                      {opt.icon} {opt.title}
-                                      <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '4px', background: labelBg, color: labelColor, fontWeight: 700 }}>
-                                        {labelText}
-                                      </span>
-                                    </div>
-                                    <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: 1.4 }}>
-                                      {opt.desc}
-                                    </div>
-                                  </div>
-                                </div>
+                              <div style={{ color: isSelected ? 'var(--rta-blue)' : 'var(--text-secondary)' }}>
+                                {opt.icon}
                               </div>
-
-                              {/* Render impact projections if not monitor */}
-                              {!isMonitor && opt.impact && (
-                                <div style={{ marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-                                  <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                                    <strong>Efficacy Analysis:</strong> {opt.impact.reason}
-                                  </div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '14px', marginTop: '8px' }}>
-                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Projected Risk</span>
-                                      <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                                        {opt.impact.afterRisk} ({opt.impact.afterLevel})
-                                      </strong>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Speed Delta</span>
-                                      <strong style={{ fontSize: '14px', color: 'var(--color-low)' }}>
-                                        {opt.impact.speedDeltaKph > 0 ? `+${opt.impact.speedDeltaKph}` : '0'} kph
-                                      </strong>
-                                    </div>
-                                    <div style={{ background: 'var(--bg-main)', padding: '8px 10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 750, letterSpacing: '0.02em', marginBottom: '2px' }}>Volume Delta</span>
-                                      <strong style={{ fontSize: '14px', color: opt.impact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
-                                        {opt.impact.volumeDeltaVph} vph
-                                      </strong>
-                                    </div>
-                                  </div>
-                                </div>
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-title)', lineHeight: 1.2 }}>
+                                {opt.title}
+                              </div>
+                              {isRecommended && (
+                                <span style={{ fontSize: '8px', background: 'rgba(34, 197, 94, 0.15)', color: 'var(--color-low)', padding: '1px 4px', borderRadius: '3px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                  REC
+                                </span>
                               )}
                             </div>
                           );
                         })}
                       </div>
 
+                      {/* Selected option analysis and delta predictions */}
+                      {(() => {
+                        const selectedOpt = simulatorOptions.find(o => o.key === activeMitigationKey) || simulatorOptions[5];
+                        const isMonitor = selectedOpt.key === 'monitor';
+                        const optImpact = selectedOpt.impact;
+
+                        return (
+                          <div className="detail-card animate-fade-in" style={{ padding: '14px', background: 'var(--bg-panel)', border: '1px solid var(--border-color)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-title)' }}>
+                                Analysis: {selectedOpt.title}
+                              </span>
+                              <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '4px', background: selectedOpt.key === recommendedSimKey ? 'rgba(34, 197, 94, 0.15)' : 'var(--border-color)', color: selectedOpt.key === recommendedSimKey ? 'var(--color-low)' : 'var(--text-secondary)', fontWeight: 700 }}>
+                                {selectedOpt.key === recommendedSimKey ? 'RECOMMENDED' : selectedOpt.key === 'monitor' ? 'BASELINE' : 'SIMULATION'}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                              {selectedOpt.desc}
+                            </p>
+                            
+                            {!isMonitor && optImpact && (
+                              <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4, background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                <strong>Efficacy Analysis:</strong> {optImpact.reason}
+                              </div>
+                            )}
+
+                            {!isMonitor && optImpact && (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '12px' }}>
+                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Proj. Risk</span>
+                                  <strong style={{ color: 'var(--text-primary)' }}>
+                                    {optImpact.afterRisk} ({optImpact.afterLevel})
+                                  </strong>
+                                </div>
+                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Speed Delta</span>
+                                  <strong style={{ color: 'var(--color-low)' }}>
+                                    {optImpact.speedDeltaKph > 0 ? `+${optImpact.speedDeltaKph}` : '0'} kph
+                                  </strong>
+                                </div>
+                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Volume Delta</span>
+                                  <strong style={{ color: optImpact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
+                                    {optImpact.volumeDeltaVph} vph
+                                  </strong>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* Mitigated Scenario Target Projection (Expected Impact Preview) */}
                       {mitigatedData && (
-                        <div className="detail-card animate-fade-in" style={{ padding: '20px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '16px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-title)', marginBottom: '8px' }}>
+                        <div className="detail-card animate-fade-in" style={{ padding: '14px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '8px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-title)', marginBottom: '4px' }}>
                             Mitigated Scenario Target Projection
                           </div>
-                          <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
                             Applying <strong>{activeMitigationKey === 'route-advisory' ? 'Route Advisory' : activeMitigationKey === 'signal-timing' ? 'Signal Timing split overrides' : activeMitigationKey === 'metro-riders' ? 'Metro transit shifts' : activeMitigationKey === 'salik-shift' ? 'Salik pricing discounts' : activeMitigationKey === 'incident-response' ? 'Emergency responder coordination' : 'Monitor Mode'}</strong> is projected to reduce corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
                           </div>
                         </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info } from 'lucide-react';
+import { Info, Gauge, Zap, Navigation, Clock } from 'lucide-react';
 import { Corridor } from '../lib/types';
 
 interface CorridorDetailsProps {
@@ -41,144 +41,115 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
     );
   }
 
+  const currentRisk = appliedActions[selectedLocationId] && mitigatedData ? mitigatedData.score : selectedCorridor.congestion_pressure_score;
+  const currentRiskLevel = appliedActions[selectedLocationId] && mitigatedData ? mitigatedData.level : selectedCorridor.risk_level;
+  
+  const formattedSpeedDrop = Math.max(0, 80 - selectedCorridor.avg_speed_kph).toFixed(1);
+
   return (
-    <div className="hotspot-detail-grid animate-fade-in" id="section-d-details" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
-      {/* Risk Gauge Circle */}
-      <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' }}>
-        <span className="kpi-title" style={{ display: 'block', textAlign: 'center', fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-          Congestion Risk Score
-        </span>
-        <div className="risk-gauge-container" style={{ margin: '12px auto' }}>
-          <svg className="risk-circle-svg" style={{ width: '80px', height: '80px' }}>
-            <circle className="risk-circle-bg" cx="40" cy="40" r="34" style={{ fill: 'none', stroke: 'var(--border-color)', strokeWidth: 6 }} />
-            <circle
-              className="risk-circle-val"
-              cx="40"
-              cy="40"
-              r="34"
-              style={{
-                fill: 'none',
-                strokeWidth: 6,
-                strokeLinecap: 'round',
-                transition: 'stroke-dashoffset 0.35s'
-              }}
-              stroke={
-                appliedActions[selectedLocationId] && mitigatedData
-                  ? (mitigatedData.score >= 80 ? 'var(--color-critical)' : mitigatedData.score >= 60 ? 'var(--color-high)' : mitigatedData.score >= 40 ? 'var(--color-medium)' : 'var(--color-low)')
-                  : (selectedCorridor.congestion_pressure_score >= 80 ? 'var(--color-critical)' : selectedCorridor.congestion_pressure_score >= 60 ? 'var(--color-high)' : selectedCorridor.congestion_pressure_score >= 40 ? 'var(--color-medium)' : 'var(--color-low)')
-              }
-              strokeDasharray="213.6"
-              strokeDashoffset={
-                213.6 - (213.6 * (appliedActions[selectedLocationId] && mitigatedData ? mitigatedData.score : selectedCorridor.congestion_pressure_score)) / 100
-              }
-            />
-          </svg>
-          <div className="risk-value-text" style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-title)' }}>
-            {appliedActions[selectedLocationId] && mitigatedData ? mitigatedData.score : selectedCorridor.congestion_pressure_score}
+      {/* 2x2 Consolidated Live Telemetry Grid */}
+      <div className="hotspot-detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+        
+        {/* Risk Index Tile */}
+        <div className="detail-card" style={{ padding: '16px', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Congestion Risk</div>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: currentRisk >= 80 ? 'var(--color-critical)' : currentRisk >= 60 ? 'var(--color-high)' : currentRisk >= 40 ? 'var(--color-medium)' : 'var(--color-low)' }}>
+            {currentRisk} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>/ 100</span>
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Status: <strong style={{ color: 'var(--text-primary)' }}>{currentRiskLevel}</strong>
           </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Risk Category: <strong style={{ color: 'var(--text-title)', fontWeight: 700 }}>
-            {appliedActions[selectedLocationId] && mitigatedData ? mitigatedData.level : selectedCorridor.risk_level}
-          </strong>
+
+        {/* Corridor Speed Tile */}
+        <div className="detail-card" style={{ padding: '16px', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Corridor Speed</div>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-title)' }}>
+            {selectedCorridor.avg_speed_kph} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>kph</span>
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Speed Drop: <span style={{ color: 'var(--color-critical)', fontWeight: 600 }}>{formattedSpeedDrop} kph</span>
+          </div>
         </div>
+
+        {/* V/C Ratio Tile */}
+        <div className="detail-card" style={{ padding: '16px', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Volume / Capacity (V/C)</div>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-title)' }}>
+            {selectedCorridor.vc_ratio.toFixed(2)}
+          </div>
+          <div style={{ width: '100%' }}>
+            <div style={{ height: '4px', background: 'var(--bg-main)', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, selectedCorridor.vc_ratio * 100)}%`, background: selectedCorridor.vc_ratio > 0.9 ? 'var(--color-critical)' : 'var(--color-medium)' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Travel Time Index Tile */}
+        <div className="detail-card" style={{ padding: '16px', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Travel Time Index</div>
+          <div style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-title)' }}>
+            {selectedCorridor.travel_time_index.toFixed(2)}x
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Trip takes <strong>{((selectedCorridor.travel_time_index - 1) * 100).toFixed(0)}% longer</strong>
+          </div>
+        </div>
+
       </div>
 
-      {/* Avg Speed Detail */}
-      <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' }}>
-        <span className="kpi-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-          Average Corridor Speed
-        </span>
-        <div style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text-title)', margin: '8px 0' }}>
-          {selectedCorridor.avg_speed_kph} <span style={{ fontSize: '16px', fontWeight: 500, color: 'var(--text-secondary)' }}>kph</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Free-flow speed limit: 80 kph
-          </div>
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Corridor Speed drop: <span style={{ color: 'var(--color-critical)', fontWeight: 700 }}>
-              {Math.max(0, 80 - selectedCorridor.avg_speed_kph)} kph
+      {/* Nearby Intersection Telemetry (Clean Dark Mode Badges) */}
+      {junctionPerformance && (
+        <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-title)' }}>Intersection Diagnostics</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {junctionPerformance.junction_id} · {junctionPerformance.control_type}
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* V/C ratio & Volume progress */}
-      <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' }}>
-        <span className="kpi-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-          Volume / Capacity Ratio
-        </span>
-        <div style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text-title)', margin: '8px 0' }}>
-          {selectedCorridor.vc_ratio.toFixed(2)}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-          <div className="telemetry-progress-container" style={{ margin: 0 }}>
-            <div className="telemetry-progress-bar-bg" style={{ height: '6px', background: 'var(--border-color)', borderRadius: '3px', overflow: 'hidden' }}>
-              <div 
-                className="telemetry-progress-bar-val" 
-                style={{ 
-                  height: '100%',
-                  width: `${Math.min(100, selectedCorridor.vc_ratio * 100)}%`,
-                  background: selectedCorridor.vc_ratio > 0.9 ? 'var(--color-critical)' : selectedCorridor.vc_ratio > 0.7 ? 'var(--color-medium)' : 'var(--color-low)'
-                }} 
-              />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            
+            <div style={{ background: 'var(--bg-main)', padding: '10px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '64px', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Avg Delay</span>
+              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                {appliedActions[selectedLocationId] && mitigatedData && mitigatedData.delay !== null ? mitigatedData.delay : Math.round(junctionPerformance.avg_delay_s_per_veh)}s
+              </strong>
             </div>
-          </div>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            Demand flow: {selectedCorridor.volume_vph} / {selectedCorridor.capacity_vph} vph
-          </div>
-        </div>
-      </div>
 
-      {/* Travel Time Index */}
-      <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '180px' }}>
-        <span className="kpi-title" style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-          Travel Time Index (TTI)
-        </span>
-        <div style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text-title)', margin: '8px 0' }}>
-          {selectedCorridor.travel_time_index.toFixed(2)}x
-        </div>
-        <span style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Trip takes <strong style={{ color: 'var(--text-title)' }}>{((selectedCorridor.travel_time_index - 1) * 100).toFixed(0)}% longer</strong> than free-flow limits.
-        </span>
-      </div>
+            <div style={{ background: 'var(--bg-main)', padding: '10px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '64px', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Saturation</span>
+              <strong style={{ fontSize: '14px', color: junctionPerformance.degree_of_saturation > 0.85 ? 'var(--color-critical)' : 'var(--text-primary)' }}>
+                {Math.round(junctionPerformance.degree_of_saturation * 100)}%
+              </strong>
+            </div>
 
-      {/* Explainable AI Forecast details */}
-      {showForecastCard && selectedCorridor.forecast && (
-        <div className="detail-card" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            <span className="kpi-title" style={{ fontSize: '16px' }}>Explainable AI Forecast Profile</span>
-            <span style={{ fontSize: '13px', color: 'var(--rta-blue)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>AI Window: Next 30–60 Mins</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', paddingBottom: '4px' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Model Confidence Level:</span>
-              <span style={{ fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast?.forecast_confidence}%</span>
+            <div style={{ background: 'var(--bg-main)', padding: '10px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '64px', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Queue</span>
+              <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                {junctionPerformance.avg_queue_veh} veh
+              </strong>
             </div>
-            <div style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>Top Contributing factors:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {selectedCorridor.forecast?.topContributingFeatures?.map((f: string, idx: number) => (
-                <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '12px', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                  {f}
-                </span>
-              ))}
+
+            <div style={{ background: 'var(--bg-main)', padding: '10px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '64px', textAlign: 'center' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Phase Fails</span>
+              <strong style={{ fontSize: '14px', color: junctionPerformance.phase_failures > 0 ? 'var(--color-critical)' : 'var(--text-primary)' }}>
+                {junctionPerformance.phase_failures}
+              </strong>
             </div>
+
           </div>
         </div>
       )}
 
-      {/* Creek Crossing side-by-side comparison card */}
+      {/* Creek Crossing comparison card */}
       {activeScenarioId === 'creek-crossing-demo' && (
-        <div className="detail-card animate-fade-in" style={{ gridColumn: 'span 2', background: 'rgba(14, 165, 233, 0.04)', borderLeft: '4px solid var(--rta-blue)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            <span className="kpi-title" style={{ fontSize: '16px' }}>
-              Creek Crossing Corridor Performance comparison
-            </span>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Select target crossing</span>
+        <div className="detail-card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(14, 165, 233, 0.03)', borderLeft: '4px solid var(--rta-blue)' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+            Creek Crossing Comparison
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
             {['GAR_N1', 'MAK_N1', 'BBC_S1'].map(locId => {
               const corRow = corridors.find(c => c.location_id === locId);
               if (!corRow) return null;
@@ -193,46 +164,26 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
                   onClick={() => setSelectedLocationId(locId)}
                   style={{ 
                     background: 'var(--bg-card)', 
-                    padding: '14px', 
+                    padding: '8px', 
                     borderRadius: '8px', 
                     cursor: 'pointer',
                     border: isCurrent ? '2px solid var(--rta-blue)' : '1px solid var(--border-color)',
-                    boxShadow: 'var(--shadow-card)',
-                    transition: 'all 0.2s ease',
+                    textAlign: 'center',
                     position: 'relative'
                   }}
-                  className="kpi-card"
                 >
-                  <div style={{ fontWeight: 700, fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-title)' }}>
-                    <span>{locId === 'GAR_N1' ? 'Garhoud Br.' : locId === 'MAK_N1' ? 'Maktoum Br.' : 'Business Bay'}</span>
-                    {isCurrent && <span style={{ color: 'var(--rta-blue)', fontSize: '11px', fontWeight: 'bold' }}>ACTIVE</span>}
+                  <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-title)' }}>
+                    {locId === 'GAR_N1' ? 'Garhoud' : locId === 'MAK_N1' ? 'Maktoum' : 'B. Bay'}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px' }}>
-                    Speed: <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{corRow.avg_speed_kph} kph</span>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {corRow.avg_speed_kph} kph
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                    <span>Risk:</span> 
-                    <span className={`badge-risk ${corRow.risk_level.toLowerCase()}`} style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '3px' }}>
-                      {corRow.congestion_pressure_score}
-                    </span>
-                  </div>
-
-                  <div className="telemetry-progress-container" style={{ marginTop: '8px' }}>
-                    <div className="telemetry-progress-bar-bg" style={{ height: '4px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
-                      <div 
-                        className="telemetry-progress-bar-val" 
-                        style={{ 
-                          height: '100%',
-                          width: `${corRow.congestion_pressure_score}%`,
-                          background: corRow.congestion_pressure_score >= 80 ? 'var(--color-critical)' : corRow.congestion_pressure_score >= 60 ? 'var(--color-high)' : corRow.congestion_pressure_score >= 40 ? 'var(--color-medium)' : 'var(--color-low)'
-                        }} 
-                      />
-                    </div>
-                  </div>
-
+                  <span className={`badge-risk ${corRow.risk_level.toLowerCase()}`} style={{ fontSize: '10px', padding: '1px 4px', borderRadius: '3px', display: 'inline-block', marginTop: '4px' }}>
+                    {corRow.congestion_pressure_score} Risk
+                  </span>
                   {isLowest && (
-                    <div style={{ position: 'absolute', top: '-10px', right: '10px', background: 'var(--color-low)', color: 'white', fontSize: '10px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                      Best Route
+                    <div style={{ position: 'absolute', top: '-8px', right: '4px', background: 'var(--color-low)', color: 'white', fontSize: '8px', fontWeight: 'bold', padding: '1px 4px', borderRadius: '3px' }}>
+                      BEST
                     </div>
                   )}
                 </div>
@@ -242,104 +193,18 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
         </div>
       )}
 
-      {/* Adjacent crossing alternatives if creek crossings */}
+      {/* Adjacent crossing alternatives */}
       {alternatives && activeScenarioId !== 'creek-crossing-demo' && (
-        <div className="detail-card" style={{ gridColumn: 'span 2', background: 'var(--bg-panel)', borderLeft: '4px solid var(--rta-blue)', padding: '20px' }}>
-          <span className="kpi-title" style={{ display: 'block', fontSize: '14px', marginBottom: '4px', color: 'var(--rta-blue)', fontWeight: 700 }}>
-            Adjacent Crossing Alternatives
+        <div className="detail-card" style={{ background: 'var(--bg-panel)', borderLeft: '4px solid var(--rta-blue)', padding: '12px 16px' }}>
+          <span style={{ display: 'block', fontSize: '13px', marginBottom: '4px', color: 'var(--rta-blue)', fontWeight: 700 }}>
+            Adjacent Alternatives
           </span>
-          <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
-            Divert flow to adjacent bridge routes: <strong>{alternatives}</strong>. Alternate bridges currently have free capacities.
+          <p style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4, margin: 0 }}>
+            Divert to alternative crossings: <strong>{alternatives}</strong>.
           </p>
         </div>
       )}
 
-      {/* Nearby junction performance parameters */}
-      {junctionPerformance && (
-        <div className="detail-card" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-            <span className="kpi-title">Nearby Intersection Telemetry</span>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 700 }}>
-              {junctionPerformance.junction_id} · {junctionPerformance.control_type}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-            
-            <div className="telemetry-item" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '4px' }}>
-              <div className="telemetry-label" style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Avg delay</div>
-              <div className="telemetry-val" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-title)' }}>
-                {appliedActions[selectedLocationId] && mitigatedData && mitigatedData.delay !== null ? mitigatedData.delay : Math.round(junctionPerformance.avg_delay_s_per_veh)}s
-              </div>
-              <div className="telemetry-progress-container" style={{ margin: 0 }}>
-                <div className="telemetry-progress-bar-bg" style={{ height: '4px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div 
-                    className="telemetry-progress-bar-val" 
-                    style={{ 
-                      height: '100%',
-                      width: `${Math.min(100, ((appliedActions[selectedLocationId] && mitigatedData && mitigatedData.delay !== null ? mitigatedData.delay : junctionPerformance.avg_delay_s_per_veh) / 80) * 100)}%`,
-                      background: 'var(--rta-blue)'
-                    }} 
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="telemetry-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'space-between' }}>
-              <div className="telemetry-label" style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Saturation</div>
-              <div className="telemetry-val" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-title)' }}>{Math.round(junctionPerformance.degree_of_saturation * 100)}%</div>
-              <div className="telemetry-progress-container" style={{ margin: 0 }}>
-                <div className="telemetry-progress-bar-bg" style={{ height: '4px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div 
-                    className="telemetry-progress-bar-val" 
-                    style={{ 
-                      height: '100%',
-                      width: `${Math.min(100, junctionPerformance.degree_of_saturation * 100)}%`,
-                      background: junctionPerformance.degree_of_saturation > 0.85 ? 'var(--color-critical)' : junctionPerformance.degree_of_saturation > 0.7 ? 'var(--color-medium)' : 'var(--color-low)'
-                    }} 
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="telemetry-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'space-between' }}>
-              <div className="telemetry-label" style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Queue Size</div>
-              <div className="telemetry-val" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-title)' }}>{junctionPerformance.avg_queue_veh} <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>veh</span></div>
-              <div className="telemetry-progress-container" style={{ margin: 0 }}>
-                <div className="telemetry-progress-bar-bg" style={{ height: '4px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div 
-                    className="telemetry-progress-bar-val" 
-                    style={{ 
-                      height: '100%',
-                      width: `${Math.min(100, (junctionPerformance.avg_queue_veh / 35) * 100)}%`,
-                      background: 'var(--text-secondary)'
-                    }} 
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="telemetry-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'space-between' }}>
-              <div className="telemetry-label" style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>Phase Fails</div>
-              <div className="telemetry-val" style={{ fontSize: '18px', fontWeight: 800, color: junctionPerformance.phase_failures > 0 ? 'var(--color-critical)' : 'var(--text-title)' }}>
-                {junctionPerformance.phase_failures}
-              </div>
-              <div className="telemetry-progress-container" style={{ margin: 0 }}>
-                <div className="telemetry-progress-bar-bg" style={{ height: '4px', background: 'var(--border-color)', borderRadius: '2px', overflow: 'hidden' }}>
-                  <div 
-                    className="telemetry-progress-bar-val" 
-                    style={{ 
-                      height: '100%',
-                      width: `${Math.min(100, (junctionPerformance.phase_failures / 5) * 100)}%`,
-                      background: 'var(--color-critical)'
-                    }} 
-                  />
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
     </div>
   );
 };
