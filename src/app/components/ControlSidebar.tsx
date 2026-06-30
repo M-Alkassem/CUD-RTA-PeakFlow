@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   Sun, 
   Moon, 
-  Info, 
   CheckCircle, 
   LayoutDashboard, 
   Map, 
@@ -49,36 +48,36 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   };
 
   const navItems: { label: string; tab: ActiveTab; icon: React.ReactNode }[] = [
-    { label: 'Dashboard', tab: 'overview', icon: <LayoutDashboard size={18} /> },
-    { label: 'Live Map', tab: 'map', icon: <Map size={18} /> },
-    { label: 'AI Predictions', tab: 'forecast', icon: <Cpu size={18} /> },
-    { label: 'Incidents', tab: 'forecast', icon: <AlertTriangle size={18} /> },
-    { label: 'Signal Timing', tab: 'forecast', icon: <Activity size={18} /> },
-    { label: 'AI Briefing', tab: 'briefing', icon: <Shield size={18} /> }
+    { label: 'Dashboard', tab: 'overview', icon: <LayoutDashboard size={16} /> },
+    { label: 'Live Map', tab: 'map', icon: <Map size={16} /> },
+    { label: 'AI Predictions', tab: 'forecast', icon: <Cpu size={16} /> },
+    { label: 'Incidents', tab: 'forecast', icon: <AlertTriangle size={16} /> },
+    { label: 'Signal Timing', tab: 'forecast', icon: <Activity size={16} /> },
+    { label: 'AI Briefing', tab: 'briefing', icon: <Shield size={16} /> }
   ];
 
   return (
-    <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)', padding: '28px 24px', gap: '26px', background: 'var(--bg-panel)', overflowY: 'auto' }}>
+    <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)', padding: '20px 18px', gap: '16px', background: 'var(--bg-panel)', overflowY: 'auto' }}>
       
       {/* App Brand Header */}
-      <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className="rta-logo" style={{ fontSize: '13px', padding: '3px 8px', borderRadius: '4px', fontWeight: 800, background: 'var(--rta-red)', color: 'white' }}>RTA</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }}></span>
+      <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="rta-logo" style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, background: 'var(--rta-red)', color: 'white', letterSpacing: '0.02em' }}>RTA</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', padding: '1px 6px', borderRadius: '20px', fontSize: '10px', fontWeight: 700 }}>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }}></span>
             ONLINE
           </div>
         </div>
-        <h1 className="console-title" style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.03em', marginTop: '4px' }}>
+        <h1 className="console-title" style={{ fontSize: '28px', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', marginTop: '2px' }}>
           PeakFlow Copilot
         </h1>
-        <div style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: 1.4 }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 500 }}>
           Traffic Prevention Console
         </div>
       </div>
 
       {/* Modern Sidebar Navigation Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item, idx) => {
           const isItemActive = activeTab === item.tab;
           return (
@@ -88,14 +87,14 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                gap: '10px',
                 width: '100%',
-                padding: '12px 16px',
+                padding: '10px 12px',
                 borderRadius: '8px',
                 border: 'none',
                 background: isItemActive ? 'var(--rta-blue-bg)' : 'transparent',
                 color: isItemActive ? 'var(--rta-blue)' : 'var(--text-secondary)',
-                fontSize: '17px',
+                fontSize: '16px',
                 fontWeight: 600,
                 textAlign: 'left',
                 cursor: 'pointer',
@@ -111,27 +110,27 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
       </div>
 
       {/* Clock and Theme Controls */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600 }}>
           <span className="status-dot active"></span>
-          TOC Clock: {realTime || '00:00:00'}
+          Clock: {realTime || '00:00:00'}
         </div>
         <button 
           onClick={toggleTheme}
-          style={{ cursor: 'pointer', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '15px', fontWeight: 600, background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'all 0.15s ease' }}
+          style={{ cursor: 'pointer', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '14px', fontWeight: 600, background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'all 0.15s ease' }}
         >
           {theme === 'dark' ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sun size={15} /> Light Mode</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Sun size={14} /> Light Mode</span>
           ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Moon size={15} /> Dark Mode</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Moon size={14} /> Dark Mode</span>
           )}
         </button>
       </div>
 
       {/* Replay Launcher Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-        <span style={{ fontSize: '12px', display: 'block', paddingLeft: '4px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>Simulation Replays</span>
-        <div className="scenario-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+        <span style={{ fontSize: '11px', display: 'block', paddingLeft: '4px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>Simulation Replays</span>
+        <div className="scenario-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {scenarios.map(sc => {
             const isOptional = sc.id === 'rain-stress-test';
             const simplifiedSubtitle = {
@@ -147,15 +146,15 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
                 onClick={() => handleLaunchScenario(sc)}
                 className={`scenario-card ${isOptional ? 'optional' : ''} ${activeScenarioId === sc.id ? 'active' : ''}`}
                 id={`scenario-${sc.id}`}
-                style={{ width: '100%', cursor: 'pointer', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}
+                style={{ width: '100%', cursor: 'pointer', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}
               >
-                <h4 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0, fontSize: '15px', fontWeight: 700, lineHeight: 1.4 }}>
+                <h4 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0, fontSize: '14px', fontWeight: 700, lineHeight: 1.35 }}>
                   <span>
                     {sc.id === 'rain-stress-test' ? 'Storm Test' : sc.title}
                   </span>
-                  {activeScenarioId === sc.id && <CheckCircle size={14} className="text-primary" />}
+                  {activeScenarioId === sc.id && <CheckCircle size={12} className="text-primary" />}
                 </h4>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.45 }}>{simplifiedSubtitle}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>{simplifiedSubtitle}</p>
               </button>
             );
           })}

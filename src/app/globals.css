@@ -9,7 +9,7 @@
   --bg-card: #131C2E;
   --bg-card-hover: #1e293b;
   
-  --border-color: #243047;
+  --border-color: #1e2736;
   --border-highlight: #0EA5E9;
   
   --text-title: #F8FAFC;
@@ -1493,17 +1493,17 @@ h1, h2, h3, h4, h5, h6 {
 /* Enforce Inter globally */
 body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  font-size: 16px !important;
-  line-height: 1.6 !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
   background-color: var(--bg-main) !important;
 }
 
 /* Page / App Title */
 .console-title {
   font-family: var(--font-inter), sans-serif !important;
-  font-size: 32px !important;
+  font-size: 28px !important;
   font-weight: 800 !important;
-  line-height: 1.2 !important;
+  line-height: 1.15 !important;
   letter-spacing: -0.03em !important;
   color: var(--text-title) !important;
 }
@@ -1551,15 +1551,15 @@ body {
 
 /* Headings & Captions */
 .panel-title {
-  font-size: 24px !important;
+  font-size: 20px !important;
   font-weight: 750 !important;
-  line-height: 1.3 !important;
+  line-height: 1.25 !important;
   letter-spacing: -0.02em !important;
   font-family: var(--font-inter), sans-serif !important;
 }
 
 .kpi-title, .brief-section-title {
-  font-size: 19px !important;
+  font-size: 18px !important;
   font-weight: 700 !important;
   line-height: 1.3 !important;
   font-family: var(--font-inter), sans-serif !important;
@@ -1575,10 +1575,16 @@ body {
   padding: 24px !important;
 }
 
-/* Body / explanation text sizes: 16px */
-p, .helper-text, .telemetry-label, .map-html-tooltip-row {
-  font-size: 16px !important;
+/* Body / explanation text sizes: 15px */
+p, .telemetry-label, .map-html-tooltip-row {
+  font-size: 15px !important;
   line-height: 1.5 !important;
+}
+
+.helper-text {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  color: var(--text-muted) !important;
 }
 
 /* Table text: 15px minimum */

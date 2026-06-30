@@ -256,48 +256,55 @@ export default function Page() {
         <section className="panel" style={{ overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-main)' }} id="main-telemetry-content">
           
           {/* 1. Page Header with Title, Subtitle, and Clock controllers */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px', gap: '20px' }}>
-            <div>
-              <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
-                PeakFlow Operations Dashboard
-              </h2>
-              <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-                Predict congestion, compare prevention options, and prepare AI-assisted operator briefings.
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15 }}>
+                  PeakFlow Operations Dashboard
+                </h2>
+                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+                  Predict congestion, compare prevention options, and prepare AI-assisted operator briefings.
+                </p>
+              </div>
             </div>
             
-            {/* Clock Replay Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-              <div className="status-badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', padding: '0 16px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                Replay: {String(hour).padStart(2, '0')}:00
+            {/* Simulation Controller Row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: 'var(--bg-panel)', padding: '10px 16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>System Simulator Controls</span>
               </div>
-              <button 
-                onClick={() => setIsPlaying(!isPlaying)} 
-                className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
-                style={{ padding: '0 18px', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', borderRadius: '8px', height: '42px', border: 'none' }}
-              >
-                {isPlaying ? <Pause size={15} /> : <Play size={15} />}
-                {isPlaying ? 'Pause Feed' : 'Start Feed'}
-              </button>
-              <button 
-                onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
-                className="btn-action secondary"
-                style={{ padding: '0 18px', fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', height: '42px' }}
-              >
-                <SkipForward size={15} /> +1 Hr Tick
-              </button>
-              
-              {/* Play Speed selector dropdown */}
-              <select 
-                value={playSpeed} 
-                onChange={(e) => setPlaySpeed(Number(e.target.value))}
-                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', height: '42px', display: 'flex', alignItems: 'center' }}
-              >
-                <option value={8}>Speed: 8s</option>
-                <option value={4}>Speed: 4s</option>
-                <option value={2}>Speed: 2s</option>
-                <option value={1}>Speed: 1s</option>
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="status-badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', padding: '0 14px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  Replay Time: {String(hour).padStart(2, '0')}:00
+                </div>
+                <button 
+                  onClick={() => setIsPlaying(!isPlaying)} 
+                  className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
+                  style={{ padding: '0 16px', fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', borderRadius: '8px', height: '38px', border: 'none' }}
+                >
+                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                  {isPlaying ? 'Pause Feed' : 'Start Feed'}
+                </button>
+                <button 
+                  onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
+                  className="btn-action secondary"
+                  style={{ padding: '0 16px', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', height: '38px' }}
+                >
+                  <SkipForward size={14} /> +1 Hr Tick
+                </button>
+                
+                {/* Play Speed selector dropdown */}
+                <select 
+                  value={playSpeed} 
+                  onChange={(e) => setPlaySpeed(Number(e.target.value))}
+                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '0 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', height: '38px', display: 'flex', alignItems: 'center' }}
+                >
+                  <option value={8}>Speed: 8s</option>
+                  <option value={4}>Speed: 4s</option>
+                  <option value={2}>Speed: 2s</option>
+                  <option value={1}>Speed: 1s</option>
+                </select>
+              </div>
             </div>
           </div>
 
