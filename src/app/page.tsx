@@ -55,7 +55,7 @@ export default function Page() {
     activeScenario,
     sortedCorridors,
     handleLaunchScenario
-  } = useTrafficData((newId) => {
+  } = useTrafficData(selectedLocationId, (newId) => {
     setSelectedLocationId(newId);
   });
 

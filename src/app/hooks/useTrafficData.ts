@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Scenario, Corridor } from '../lib/types';
 
-export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
+export function useTrafficData(
+  selectedLocationId: string | null,
+  onCorridorChange?: (id: string | null) => void
+) {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [activeScenarioId, setActiveScenarioId] = useState('pm-peak-demo');
   const [date, setDate] = useState('2024-10-16');
@@ -12,7 +15,11 @@ export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
   const [corridors, setCorridors] = useState<Corridor[]>([]);
   const [kpis, setKpis] = useState({ criticalHotspots: 0, highRiskRoads: 0, avgSpeed: 80, totalVolume: 0 });
   const [calendarContext, setCalendarContext] = useState<any>({});
+  
+  // Performant In-Memory Cache Ref
+  const cacheRef = useRef<Record<string, any>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScenarioIdRef = useRef(activeScenarioId);
 
   // 1. Fetch scenarios on mount
   useEffect(() => {
@@ -30,21 +37,32 @@ export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
       .catch(err => console.error('Failed to load scenarios', err));
   }, []);
 
-  // 2. Fetch traffic data on date/hour change (with automatic highest-risk selection sync)
+  // 2. Scenario Sync Trigger (Runs only when the user changes active scenario)
   useEffect(() => {
-    fetch(`/api/traffic?date=${date}&hour=${hour}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.corridors) {
-          setCorridors(data.corridors);
-          setKpis(data.kpis);
-          setCalendarContext(data.calendarContext);
+    if (activeScenarioId !== lastScenarioIdRef.current) {
+      lastScenarioIdRef.current = activeScenarioId;
+      const currentScenario = scenarios.find(s => s.id === activeScenarioId);
+      if (currentScenario && onCorridorChange) {
+        onCorridorChange(currentScenario.focusLocation);
+      }
+    }
+  }, [activeScenarioId, scenarios]);
 
-          // Find the active scenario's focus IDs
+  // 3. Fetch traffic data with in-memory caching and clean updates
+  useEffect(() => {
+    const cacheKey = `${date}_${hour}`;
+    
+    const applyTrafficData = (data: any) => {
+      if (data.corridors) {
+        setCorridors(data.corridors);
+        setKpis(data.kpis);
+        setCalendarContext(data.calendarContext);
+
+        // Fallback: If no corridor is selected, select the first highest-risk corridor
+        if (!selectedLocationId && onCorridorChange) {
           const currentScenario = scenarios.find(s => s.id === activeScenarioId);
           const focusIds = currentScenario?.focusIds || [];
-
-          // Sort matching corridors: focus IDs first, then risk score descending
+          
           const sorted = [...data.corridors].sort((a, b) => {
             const aIsFocus = focusIds.includes(a.location_id);
             const bIsFocus = focusIds.includes(b.location_id);
@@ -53,15 +71,29 @@ export function useTrafficData(onCorridorChange?: (id: string | null) => void) {
             return b.congestion_pressure_score - a.congestion_pressure_score;
           });
 
-          if (sorted.length > 0 && onCorridorChange) {
+          if (sorted.length > 0) {
             onCorridorChange(sorted[0].location_id);
           }
         }
+      }
+    };
+
+    // Use cached response if available (Major Performance Boost)
+    if (cacheRef.current[cacheKey]) {
+      applyTrafficData(cacheRef.current[cacheKey]);
+      return;
+    }
+
+    fetch(`/api/traffic?date=${date}&hour=${hour}`)
+      .then(res => res.json())
+      .then(data => {
+        cacheRef.current[cacheKey] = data; // Cache in memory
+        applyTrafficData(data);
       })
       .catch(err => console.error('Error fetching traffic data', err));
-  }, [date, hour, activeScenarioId, scenarios]);
+  }, [date, hour, activeScenarioId, scenarios, selectedLocationId]);
 
-  // 3. Play/Pause interval
+  // 4. Play/Pause interval timer
   useEffect(() => {
     if (isPlaying) {
       timerRef.current = setInterval(() => {
