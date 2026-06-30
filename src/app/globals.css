@@ -1159,17 +1159,16 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Glow effects and animation utilities */
 .animate-fade-in {
-  animation: fadeIn 0.35s ease-out forwards;
+  animation: fadeIn 0.2s ease-out forwards;
+  will-change: opacity; /* Optimizes compositing layer */
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -1571,8 +1570,10 @@ body {
   background: var(--bg-panel) !important;
   border: 1px solid var(--border-color) !important;
   border-radius: var(--border-radius-card) !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: none !important; /* Soft flat outlines to resolve scroll repaint lag */
   padding: 24px !important;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0); /* Force GPU compositing for fast repaints */
 }
 
 /* Body / explanation text sizes: 15px */
