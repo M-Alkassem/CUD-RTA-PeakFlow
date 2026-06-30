@@ -73,7 +73,7 @@ export default function Page() {
     if (isStorm) {
       return {
         action: 'Official roadside advisory + incident response',
-        reason: 'Severe rain and flooding event. Dispatch active emergency responders to flooded exits and advise public transport shift.'
+        reason: 'Severe rain and flooding event. Coordinate active emergency responses to flooded exits and advise public transport shift.'
       };
     }
 
@@ -101,7 +101,7 @@ export default function Page() {
       }
       return {
         action: 'Incident response + route advisory',
-        reason: 'Incident lanes blocked. Dispatch emergency road patrol team and publish dynamic route rerouting via official roadside signs.'
+        reason: 'Incident lanes blocked. Coordinate emergency road patrol response and publish dynamic route rerouting via official roadside signs.'
       };
     }
 
@@ -223,7 +223,7 @@ export default function Page() {
     {
       key: 'incident-response',
       title: 'Incident Response',
-      desc: 'Dispatches RTA emergency patrol units to clear blocked lanes.',
+      desc: 'Coordinates RTA emergency patrol response to clear blocked lanes.',
       impact: incidentImpact,
       icon: <Zap size={15} />
     },
@@ -606,7 +606,7 @@ export default function Page() {
                             Mitigated Scenario Target Projection
                           </div>
                           <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                            Applying <strong>{activeMitigationKey === 'route-advisory' ? 'Route Advisory' : activeMitigationKey === 'signal-timing' ? 'Signal Timing split overrides' : activeMitigationKey === 'metro-riders' ? 'Metro transit shifts' : activeMitigationKey === 'salik-shift' ? 'Salik pricing discounts' : activeMitigationKey === 'incident-response' ? 'Emergency responder dispatches' : 'Monitor Mode'}</strong> is projected to reduce corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
+                            Applying <strong>{activeMitigationKey === 'route-advisory' ? 'Route Advisory' : activeMitigationKey === 'signal-timing' ? 'Signal Timing split overrides' : activeMitigationKey === 'metro-riders' ? 'Metro transit shifts' : activeMitigationKey === 'salik-shift' ? 'Salik pricing discounts' : activeMitigationKey === 'incident-response' ? 'Emergency responder coordination' : 'Monitor Mode'}</strong> is projected to reduce corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
                           </div>
                         </div>
                       )}
