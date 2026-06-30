@@ -22,6 +22,8 @@ interface ControlSidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   selectedLocationId: string | null;
+  activeSidebarNav: string;
+  setActiveSidebarNav: (label: string) => void;
 }
 
 export const ControlSidebar: React.FC<ControlSidebarProps> = ({
@@ -33,13 +35,17 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   toggleTheme,
   activeTab,
   setActiveTab,
-  selectedLocationId
+  selectedLocationId,
+  activeSidebarNav,
+  setActiveSidebarNav
 }) => {
-  const handleTabClick = (tab: ActiveTab) => {
+  const handleTabClick = (label: string, tab: ActiveTab) => {
     if (tab === 'overview' || tab === 'map') {
+      setActiveSidebarNav(label);
       setActiveTab(tab);
     } else {
       if (selectedLocationId) {
+        setActiveSidebarNav(label);
         setActiveTab(tab);
       } else {
         alert("Please select a hotspot corridor first.");
@@ -59,15 +65,8 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   return (
     <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)', padding: '20px 18px', gap: '16px', background: 'var(--bg-panel)', overflowY: 'auto' }}>
       
-      {/* App Brand Header */}
+      {/* App Brand Header (Removed RTA badge & ONLINE pill) */}
       <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', paddingBottom: '12px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div className="rta-logo" style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, background: 'var(--rta-red)', color: 'white', letterSpacing: '0.02em' }}>RTA</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(34, 197, 94, 0.1)', color: '#22C55E', padding: '1px 6px', borderRadius: '20px', fontSize: '10px', fontWeight: 700 }}>
-            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }}></span>
-            ONLINE
-          </div>
-        </div>
         <h1 className="console-title" style={{ fontSize: '28px', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em', marginTop: '2px' }}>
           PeakFlow Copilot
         </h1>
@@ -76,14 +75,14 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
         </div>
       </div>
 
-      {/* Modern Sidebar Navigation Items */}
+      {/* Modern Sidebar Navigation Items (Fixed triple highlighting) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item, idx) => {
-          const isItemActive = activeTab === item.tab;
+          const isItemActive = activeSidebarNav === item.label;
           return (
             <button
               key={idx}
-              onClick={() => handleTabClick(item.tab)}
+              onClick={() => handleTabClick(item.label, item.tab)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -109,15 +108,11 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
         })}
       </div>
 
-      {/* Clock and Theme Controls */}
+      {/* Theme Toggle Button (Removed Clock status box) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600 }}>
-          <span className="status-dot active"></span>
-          Clock: {realTime || '00:00:00'}
-        </div>
         <button 
           onClick={toggleTheme}
-          style={{ cursor: 'pointer', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '14px', fontWeight: 600, background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'all 0.15s ease' }}
+          style={{ cursor: 'pointer', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '14px', fontWeight: 600, background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'all 0.15s ease' }}
         >
           {theme === 'dark' ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Sun size={14} /> Light Mode</span>

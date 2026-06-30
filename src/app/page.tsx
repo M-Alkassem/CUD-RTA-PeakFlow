@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -36,7 +36,22 @@ import { ActiveTab } from './lib/types';
 export default function Page() {
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>('SZR_S1');
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+  const [activeSidebarNav, setActiveSidebarNav] = useState('Dashboard');
   const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      setActiveSidebarNav('Dashboard');
+    } else if (activeTab === 'map') {
+      setActiveSidebarNav('Live Map');
+    } else if (activeTab === 'briefing') {
+      setActiveSidebarNav('AI Briefing');
+    } else if (activeTab === 'forecast') {
+      if (!['AI Predictions', 'Incidents', 'Signal Timing'].includes(activeSidebarNav)) {
+        setActiveSidebarNav('AI Predictions');
+      }
+    }
+  }, [activeTab]);
 
   const { theme, realTime, toggleTheme } = useTheme();
   const {
@@ -250,6 +265,8 @@ export default function Page() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           selectedLocationId={selectedLocationId}
+          activeSidebarNav={activeSidebarNav}
+          setActiveSidebarNav={setActiveSidebarNav}
         />
 
         {/* Content Pane */}
