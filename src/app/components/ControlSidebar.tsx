@@ -24,6 +24,7 @@ interface ControlSidebarProps {
   selectedLocationId: string | null;
   activeSidebarNav: string;
   setActiveSidebarNav: (label: string) => void;
+  showToast?: (msg: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
 export const ControlSidebar: React.FC<ControlSidebarProps> = ({
@@ -37,7 +38,8 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   setActiveTab,
   selectedLocationId,
   activeSidebarNav,
-  setActiveSidebarNav
+  setActiveSidebarNav,
+  showToast
 }) => {
   const handleTabClick = (label: string, tab: ActiveTab) => {
     if (tab === 'overview' || tab === 'map') {
@@ -48,7 +50,11 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
         setActiveSidebarNav(label);
         setActiveTab(tab);
       } else {
-        alert("Please select a hotspot corridor first.");
+        if (showToast) {
+          showToast("Please select a hotspot corridor first.", "warning");
+        } else {
+          alert("Please select a hotspot corridor first.");
+        }
       }
     }
   };

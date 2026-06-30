@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Play,
   Pause,
@@ -38,6 +38,18 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [activeSidebarNav, setActiveSidebarNav] = useState('Dashboard');
   const [showTooltip, setShowTooltip] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+    setToast({ message, type });
+  }, []);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (activeTab === 'overview') {
@@ -205,11 +217,11 @@ export default function Page() {
     handleOperatorDecision(action, setAppliedActions);
     if (selectedCorridor) {
       if (action === 'review') {
-        alert(`Engineering Escalation: Manual review requested for ${selectedCorridor.road_name} (${selectedCorridor.direction}). The operations team has been notified.`);
+        showToast(`Engineering Escalation: Manual review requested for ${selectedCorridor.road_name} (${selectedCorridor.direction}). The operations team has been notified.`, 'warning');
       } else if (action === 'reject') {
-        alert(`Recommendation dismissed for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`);
+        showToast(`Recommendation dismissed for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`, 'info');
       } else if (action === 'approve') {
-        alert(`Action Approved: Mitigations applied for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`);
+        showToast(`Action Approved: Mitigations applied for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`, 'success');
       }
     }
   };
@@ -276,6 +288,7 @@ export default function Page() {
           selectedLocationId={selectedLocationId}
           activeSidebarNav={activeSidebarNav}
           setActiveSidebarNav={setActiveSidebarNav}
+          showToast={showToast}
         />
 
         {/* Content Pane */}
@@ -338,6 +351,7 @@ export default function Page() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             selectedLocationId={selectedLocationId}
+            showToast={showToast}
           />
 
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--rta-blue)', padding: '16px 20px', borderRadius: '8px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
@@ -695,6 +709,52 @@ export default function Page() {
           </div>
         </section>
       </main>
+
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div 
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(8px)',
+            borderLeft: toast.type === 'success' ? '4px solid var(--color-low)' : toast.type === 'warning' ? '4px solid var(--color-medium)' : '4px solid var(--rta-blue)',
+            borderTop: '1px solid var(--border-color)',
+            borderRight: '1px solid var(--border-color)',
+            borderBottom: '1px solid var(--border-color)',
+            borderRadius: '8px',
+            padding: '16px 20px',
+            boxShadow: 'var(--shadow-focus)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            maxWidth: '420px',
+            animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          <div style={{ flex: 1, fontSize: '14.5px', fontWeight: 600, color: 'var(--text-title)', lineHeight: 1.4 }}>
+            {toast.message}
+          </div>
+          <button 
+            onClick={() => setToast(null)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: 'var(--text-secondary)', 
+              cursor: 'pointer', 
+              fontSize: '18px',
+              fontWeight: 700,
+              padding: '0 4px',
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

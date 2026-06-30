@@ -6,12 +6,14 @@ interface DashboardTabsProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   selectedLocationId: string | null;
+  showToast?: (msg: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
 export const DashboardTabs: React.FC<DashboardTabsProps> = ({
   activeTab,
   setActiveTab,
-  selectedLocationId
+  selectedLocationId,
+  showToast
 }) => {
   const handleTabClick = (tab: ActiveTab) => {
     if (tab === 'overview' || tab === 'map') {
@@ -20,7 +22,11 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
       if (selectedLocationId) {
         setActiveTab(tab);
       } else {
-        alert("Please select a hotspot corridor first.");
+        if (showToast) {
+          showToast("Please select a hotspot corridor first.", "warning");
+        } else {
+          alert("Please select a hotspot corridor first.");
+        }
       }
     }
   };

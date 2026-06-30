@@ -7,6 +7,7 @@ interface WorkflowStepperProps {
   selectedLocationId: string | null;
   mitigations: Record<string, string>;
   briefing: any;
+  showToast?: (msg: string, type?: 'success' | 'info' | 'warning') => void;
 }
 
 export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
@@ -14,7 +15,8 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
   setActiveTab,
   selectedLocationId,
   mitigations,
-  briefing
+  briefing,
+  showToast
 }) => {
   return (
     <div className="workflow-stepper" id="guided-flow-steps">
@@ -40,7 +42,11 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
           if (selectedLocationId) {
             setActiveTab('forecast');
           } else {
-            alert("Please select a hotspot corridor (Step 2) first.");
+            if (showToast) {
+              showToast("Please select a hotspot corridor (Step 2) first.", "warning");
+            } else {
+              alert("Please select a hotspot corridor (Step 2) first.");
+            }
           }
         }}
       >
@@ -54,7 +60,11 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
           if (selectedLocationId) {
             setActiveTab('briefing');
           } else {
-            alert("Please select a hotspot corridor (Step 2) first.");
+            if (showToast) {
+              showToast("Please select a hotspot corridor (Step 2) first.", "warning");
+            } else {
+              alert("Please select a hotspot corridor (Step 2) first.");
+            }
           }
         }}
       >
