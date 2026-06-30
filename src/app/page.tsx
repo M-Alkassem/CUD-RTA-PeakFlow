@@ -325,10 +325,6 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="alert-bar" id="story-banner" style={{ fontSize: '15px', padding: '12px 16px', fontWeight: 500 }}>
-            Analyze traffic data, identify congestion before it becomes critical, compare prevention options, and generate an AI operator briefing.
-          </div>
-
           <DashboardTabs 
             activeTab={activeTab}
             setActiveTab={setActiveTab}
