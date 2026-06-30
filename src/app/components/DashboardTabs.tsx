@@ -26,36 +26,34 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
   };
 
   return (
-    <div className="main-tab-bar">
+    <div className="main-tab-bar" style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
       <button 
         className={`main-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
         onClick={() => handleTabClick('overview')}
+        style={{ flex: 1, padding: '12px 20px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
       >
-        <Sliders size={13} /> Overview
+        <Sliders size={16} /> Overview
       </button>
       <button 
         className={`main-tab-btn ${activeTab === 'map' ? 'active' : ''}`}
         onClick={() => handleTabClick('map')}
+        style={{ flex: 1, padding: '12px 20px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
       >
-        <Compass size={13} /> Map & Hotspots
+        <Compass size={16} /> Live Map
       </button>
       <button 
         className={`main-tab-btn ${activeTab === 'forecast' ? 'active' : ''}`}
         onClick={() => handleTabClick('forecast')}
+        style={{ flex: 1, padding: '12px 20px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
       >
-        <Cpu size={13} /> Forecast
-      </button>
-      <button 
-        className={`main-tab-btn ${activeTab === 'whatif' ? 'active' : ''}`}
-        onClick={() => handleTabClick('whatif')}
-      >
-        <Sliders size={13} /> What-If Simulator
+        <Cpu size={16} /> Forecast & Actions
       </button>
       <button 
         className={`main-tab-btn ${activeTab === 'briefing' ? 'active' : ''}`}
         onClick={() => handleTabClick('briefing')}
+        style={{ flex: 1, padding: '12px 20px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
       >
-        <Shield size={13} /> AI Briefing & Approval
+        <Shield size={16} /> AI Briefing
       </button>
     </div>
   );

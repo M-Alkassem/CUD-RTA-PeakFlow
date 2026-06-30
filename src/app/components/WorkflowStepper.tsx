@@ -45,21 +45,7 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
         }}
       >
         <span className="workflow-step-num">Step 3</span>
-        <span className="workflow-step-title">Review Forecast</span>
-      </div>
-
-      <div 
-        className={`workflow-step ${selectedLocationId && Object.keys(mitigations).length > 0 ? 'completed' : ''} ${activeTab === 'whatif' ? 'active' : ''}`}
-        onClick={() => {
-          if (selectedLocationId) {
-            setActiveTab('whatif');
-          } else {
-            alert("Please select a hotspot corridor (Step 2) first.");
-          }
-        }}
-      >
-        <span className="workflow-step-num">Step 4</span>
-        <span className="workflow-step-title">Compare Actions</span>
+        <span className="workflow-step-title">Review Forecast & Actions</span>
       </div>
 
       <div 
@@ -72,7 +58,7 @@ export const WorkflowStepper: React.FC<WorkflowStepperProps> = ({
           }
         }}
       >
-        <span className="workflow-step-num">Step 5</span>
+        <span className="workflow-step-num">Step 4</span>
         <span className="workflow-step-title">Generate & Approve</span>
       </div>
     </div>

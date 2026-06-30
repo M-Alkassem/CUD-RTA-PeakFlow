@@ -12,6 +12,7 @@ interface CorridorDetailsProps {
   setSelectedLocationId: (id: string) => void;
   alternatives: string | null;
   junctionPerformance: any;
+  showForecastCard?: boolean;
 }
 
 export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
@@ -23,13 +24,14 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
   corridors,
   setSelectedLocationId,
   alternatives,
-  junctionPerformance
+  junctionPerformance,
+  showForecastCard = false
 }) => {
   if (!selectedLocationId || !selectedCorridor) {
     return (
       <div className="detail-card" style={{ padding: '30px 20px', textAlign: 'center', borderStyle: 'dashed' }} id="details-placeholder">
         <Info size={24} className="text-muted" style={{ margin: '0 auto 10px' }} />
-        <h3 style={{ fontSize: '13px', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+        <h3 style={{ fontSize: '15px', marginBottom: '4px', color: 'var(--text-secondary)' }}>
           No Corridor Selected
         </h3>
         <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
@@ -127,7 +129,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
       </div>
 
       {/* Explainable AI Forecast details */}
-      {selectedCorridor.forecast && (
+      {showForecastCard && selectedCorridor.forecast && (
         <div className="detail-card" style={{ gridColumn: 'span 2' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span className="kpi-title" style={{ fontSize: '10px' }}>Explainable AI Forecast Profile</span>
@@ -234,7 +236,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
         </div>
       )}
 
-      {/* Nearby junction parameters */}
+      {/* Nearby junction performance parameters */}
       {junctionPerformance && (
         <div className="detail-card" style={{ gridColumn: 'span 2' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -314,4 +316,5 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
     </div>
   );
 };
+
 export default CorridorDetails;

@@ -1486,3 +1486,60 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 0 1px var(--rta-blue);
 }
 
+/* ==========================================
+   Phase 1 - UI Simplification & Scale Overrides
+   ========================================== */
+
+/* Enforce readable global body size */
+body {
+  font-size: 16px !important;
+}
+
+/* Page / Console title: 30px */
+.console-title {
+  font-size: 30px !important;
+  font-weight: 800 !important;
+}
+
+/* Tab labels: 16px minimum */
+.main-tab-btn {
+  font-size: 16px !important;
+  padding: 12px 20px !important;
+}
+
+/* Section headings: 22px */
+.panel-title {
+  font-size: 22px !important;
+}
+
+/* Card titles / KPI labels: 18px */
+.kpi-title, .brief-section-title {
+  font-size: 18px !important;
+}
+
+/* Body / explanation text sizes: 15px */
+p, .helper-text, .telemetry-label, .map-html-tooltip-row {
+  font-size: 15px !important;
+}
+
+/* Table text: 15px minimum */
+.hotspot-table th, .hotspot-table td, .log-table th, .log-table td {
+  font-size: 15px !important;
+  padding: 12px 14px !important;
+}
+
+/* Buttons: 16px minimum */
+.btn-action, .sidebar-nav-item, .scenario-card {
+  font-size: 16px !important;
+}
+
+/* Clean, simplified 2-column layout spacing */
+.dashboard-grid {
+  display: grid !important;
+  grid-template-columns: 340px 1fr !important;
+  gap: 20px !important;
+  padding: 20px !important;
+  height: 100vh !important;
+}
+
+

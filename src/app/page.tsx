@@ -9,8 +9,7 @@ import {
   Train,
   Sliders,
   Zap,
-  Activity,
-  History
+  Activity
 } from 'lucide-react';
 
 import { useTheme } from './hooks/useTheme';
@@ -20,9 +19,7 @@ import { useWhatIfSimulator } from './hooks/useWhatIfSimulator';
 import { useMistralBriefing } from './hooks/useMistralBriefing';
 import { useOperatorDecision } from './hooks/useOperatorDecision';
 
-import { Header } from './components/Header';
 import { ControlSidebar } from './components/ControlSidebar';
-import { WorkflowStepper } from './components/WorkflowStepper';
 import { DashboardTabs } from './components/DashboardTabs';
 import { KpiCards } from './components/KpiCards';
 import { TrafficRiskTable } from './components/TrafficRiskTable';
@@ -200,32 +197,22 @@ export default function Page() {
 
   return (
     <div className="app-container">
-      <Header 
-        realTime={realTime} 
-        activeScenario={activeScenario} 
-        theme={theme} 
-        toggleTheme={toggleTheme} 
-      />
-
-      <main className="dashboard-grid">
+      <main className="dashboard-grid" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '320px 1fr' }}>
+        {/* Left Sidebar only for scenario selection */}
         <ControlSidebar 
           scenarios={scenarios} 
           activeScenarioId={activeScenarioId} 
           handleLaunchScenario={handleLaunchScenario} 
+          realTime={realTime}
+          theme={theme}
+          toggleTheme={toggleTheme}
         />
 
-        <section className="panel" style={{ overflowY: 'auto' }} id="main-telemetry-content">
-          <div className="alert-bar" id="story-banner">
+        {/* Content Pane */}
+        <section className="panel" style={{ overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }} id="main-telemetry-content">
+          <div className="alert-bar" id="story-banner" style={{ fontSize: '16px', padding: '12px 16px', fontWeight: 500 }}>
             Analyze traffic data, identify congestion before it becomes critical, compare prevention options, and generate an AI operator briefing.
           </div>
-
-          <WorkflowStepper 
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            selectedLocationId={selectedLocationId}
-            mitigations={mitigations}
-            briefing={briefing}
-          />
 
           <DashboardTabs 
             activeTab={activeTab}
@@ -233,7 +220,7 @@ export default function Page() {
             selectedLocationId={selectedLocationId}
           />
 
-          <div style={{ background: '#EBF5FF', borderLeft: '4px solid var(--rta-blue)', padding: '12px', borderRadius: '4px', margin: '0 14px 12px 14px', fontSize: '11.5px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+          <div style={{ background: '#EBF5FF', borderLeft: '4px solid var(--rta-blue)', padding: '16px', borderRadius: '6px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
             <strong>Operational View Active:</strong> {activeScenarioId === 'pm-peak-demo' 
               ? 'PM peak pressure is building. The system ranks the highest-risk roads and recommends prevention actions before congestion becomes critical.' 
               : activeScenarioId === 'creek-crossing-demo'
@@ -243,27 +230,28 @@ export default function Page() {
               : 'Stress testing city-wide response. Massive volume shifts from flooded roads to Metro transit routes.'}
           </div>
 
-          <div className="panel-content" style={{ overflowY: 'visible', paddingTop: 0 }}>
+          <div className="panel-content" style={{ overflowY: 'visible', paddingTop: 0, flex: 1 }}>
             {activeTab === 'overview' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
-                <div className="detail-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Clock Replay Controls */}
+                <div className="detail-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button 
                       onClick={() => setIsPlaying(!isPlaying)} 
                       className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
-                      style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ padding: '8px 16px', fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+                      {isPlaying ? <Pause size={14} /> : <Play size={14} />}
                       {isPlaying ? 'Pause Feed' : 'Start Feed'}
                     </button>
                     <button 
                       onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
                       className="btn-action secondary"
-                      style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ padding: '8px 16px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <SkipForward size={12} /> +1 Hr Tick
+                      <SkipForward size={14} /> +1 Hr Tick
                     </button>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
                       Speed: <span style={{ fontWeight: 600 }}>{playSpeed}s/sim-hour</span>
                     </div>
                   </div>
@@ -273,13 +261,15 @@ export default function Page() {
                     max="10"
                     value={playSpeed}
                     onChange={(e) => setPlaySpeed(Number(e.target.value))}
-                    title="Playback Interval Speed"
-                    style={{ width: '100px', cursor: 'pointer' }}
+                    title="Playback Speed"
+                    style={{ width: '120px', cursor: 'pointer' }}
                   />
                 </div>
 
+                {/* KPI Metrics Group */}
                 <KpiCards kpis={kpis} hour={hour} />
 
+                {/* Hotspot Ranking Table */}
                 <TrafficRiskTable 
                   sortedCorridors={sortedCorridors}
                   selectedLocationId={selectedLocationId}
@@ -293,7 +283,7 @@ export default function Page() {
             )}
 
             {activeTab === 'map' && (
-              <div style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <RoadNetworkMap 
                   {...mapPanZoom}
                   corridors={corridors}
@@ -304,82 +294,115 @@ export default function Page() {
             )}
 
             {activeTab === 'forecast' && (
-              <div style={{ marginTop: '10px' }}>
-                <CorridorDetails 
-                  selectedCorridor={selectedCorridor}
-                  selectedLocationId={selectedLocationId}
-                  appliedActions={appliedActions}
-                  mitigatedData={mitigatedData}
-                  activeScenarioId={activeScenarioId}
-                  corridors={corridors}
-                  setSelectedLocationId={setSelectedLocationId}
-                  alternatives={alternatives}
-                  junctionPerformance={junctionPerformance}
-                />
-              </div>
-            )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-forecast-actions-grid">
+                {/* Left side: Telemetry details */}
+                <div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-title)' }}>
+                    Corridor Live Metrics
+                  </div>
+                  <CorridorDetails 
+                    selectedCorridor={selectedCorridor}
+                    selectedLocationId={selectedLocationId}
+                    appliedActions={appliedActions}
+                    mitigatedData={mitigatedData}
+                    activeScenarioId={activeScenarioId}
+                    corridors={corridors}
+                    setSelectedLocationId={setSelectedLocationId}
+                    alternatives={alternatives}
+                    junctionPerformance={junctionPerformance}
+                  />
+                </div>
 
-            {activeTab === 'whatif' && (
-              <div style={{ marginTop: '10px' }}>
-                {selectedLocationId && selectedCorridor ? (
-                  <div className="hotspot-detail-grid animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                    <div className="detail-card" id="section-e-whatif" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* Right side: AI Forecast + Simulator */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Explainable AI Forecast details */}
+                  {selectedLocationId && selectedCorridor?.forecast && (
+                    <div className="detail-card animate-fade-in" style={{ padding: '20px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
+                        Explainable AI Forecast
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Predictive Window:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Next 30–60 Minutes</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
+                          <span style={{ fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast.forecast_confidence}%</span>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Top Contributing Factors:</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {selectedCorridor.forecast.topContributingFeatures.map((f: string, idx: number) => (
+                              <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '13px', padding: '4px 10px', borderRadius: '4px' }}>
+                                {f}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* What-If Simulator */}
+                  {selectedLocationId && selectedCorridor ? (
+                    <div className="detail-card" id="section-e-whatif" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="kpi-title">What-If Prevention Simulator</span>
+                        <span className="kpi-title" style={{ fontSize: '18px', fontWeight: 700 }}>What-If Prevention Simulator</span>
                         {appliedActions[selectedLocationId] && (
-                          <span className="badge-risk low" style={{ fontSize: '8px' }}>Action split active</span>
+                          <span className="badge-risk low" style={{ fontSize: '12px', padding: '2px 8px' }}>Action split active</span>
                         )}
                       </div>
 
-                      <div className="recommend-badge" style={{ marginBottom: '2px' }}>
+                      <div className="recommend-badge" style={{ marginBottom: '4px', fontSize: '14px', padding: '6px 12px' }}>
                         Recommended Option: {selectedRecommendation.action}
                       </div>
-                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.35, marginBottom: '6px' }}>
+                      <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: '8px' }}>
                         {selectedRecommendation.reason}
                       </p>
 
-                      <div className="mitigation-stack">
+                      <div className="mitigation-stack" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {/* Option 1: Route Advisory */}
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'route-advisory' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'route-advisory' ? 'active' : ''} ${recommendedSimKey === 'route-advisory' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'route-advisory'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Compass size={12} className="text-primary" /> Route Advisory
-                                  {recommendedSimKey === 'route-advisory' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Diverts incoming volume to alternative bridges using signs.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'route-advisory'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Compass size={14} className="text-primary" /> Route Advisory
+                                {recommendedSimKey === 'route-advisory' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Diverts incoming volume to alternative bridges using signs.
                               </div>
                             </div>
                           </div>
                           {activeMitigationKey === 'route-advisory' && routeImpact && (
-                            <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Projection Impact: <strong style={{ color: routeImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{routeImpact.reason}</strong>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '9.5px', marginTop: '2px' }}>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px' }}>{routeImpact.afterRisk} ({routeImpact.afterLevel})</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{routeImpact.afterRisk} ({routeImpact.afterLevel})</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>+{routeImpact.speedDeltaKph} kph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{routeImpact.speedDeltaKph} kph</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Demand shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>{routeImpact.volumeDeltaVph} vph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Demand shift</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{routeImpact.volumeDeltaVph} vph</div>
                                 </div>
                               </div>
                             </div>
@@ -390,184 +413,184 @@ export default function Page() {
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'signal-timing' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'signal-timing' ? 'active' : ''} ${recommendedSimKey === 'signal-timing' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'signal-timing'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Sliders size={12} className="text-primary" /> Signal Timing Review
-                                  {recommendedSimKey === 'signal-timing' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Alters green timing split profiles at Defence intersection approaches.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'signal-timing'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Sliders size={14} className="text-primary" /> Signal Timing Review
+                                {recommendedSimKey === 'signal-timing' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Alters green timing split profiles at Defence intersection approaches.
                               </div>
                             </div>
                           </div>
                           {activeMitigationKey === 'signal-timing' && signalImpact && (
-                            <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Projection Impact: <strong style={{ color: signalImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{signalImpact.reason}</strong>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '9.5px', marginTop: '2px' }}>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px' }}>{signalImpact.afterRisk} ({signalImpact.afterLevel})</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{signalImpact.afterRisk} ({signalImpact.afterLevel})</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Delay delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>{signalImpact.delayDeltaSeconds}s / veh</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Delay delta</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{signalImpact.delayDeltaSeconds}s / veh</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Approach speed</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>+{signalImpact.speedDeltaKph} kph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Approach speed</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{signalImpact.speedDeltaKph} kph</div>
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Option 3: Public Transport */}
+                        {/* Option 3: Metro riders */}
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'metro-riders' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'metro-riders' ? 'active' : ''} ${recommendedSimKey === 'metro-riders' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'metro-riders'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Train size={12} className="text-primary" /> Public Transport Advisory
-                                  {recommendedSimKey === 'metro-riders' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Publishes app alerts advising metro ridership split updates.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'metro-riders'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Train size={14} className="text-primary" /> Public Transport Advisory
+                                {recommendedSimKey === 'metro-riders' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Publishes app alerts advising metro ridership split updates.
                               </div>
                             </div>
                           </div>
                           {activeMitigationKey === 'metro-riders' && metroImpact && (
-                            <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Projection Impact: <strong style={{ color: 'var(--color-low)' }}>{metroImpact.reason}</strong>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '9.5px', marginTop: '2px' }}>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px' }}>{metroImpact.afterRisk} ({metroImpact.afterLevel})</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{metroImpact.afterRisk} ({metroImpact.afterLevel})</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>+{metroImpact.speedDeltaKph} kph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{metroImpact.speedDeltaKph} kph</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Volume shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>{metroImpact.volumeDeltaVph} vph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Volume shift</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{metroImpact.volumeDeltaVph} vph</div>
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Option 4: Salik pricing shift */}
+                        {/* Option 4: Salik pricing dynamic pricing shift */}
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'salik-shift' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'salik-shift' ? 'active' : ''} ${recommendedSimKey === 'salik-shift' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'salik-shift'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Sliders size={12} className="text-primary" /> Off-Peak Demand Shift
-                                  {recommendedSimKey === 'salik-shift' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Advertises dynamic pricing shifts to clear congestion timings.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'salik-shift'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Sliders size={14} className="text-primary" /> Off-Peak Demand Shift
+                                {recommendedSimKey === 'salik-shift' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Advertises dynamic pricing shifts to clear congestion timings.
                               </div>
                             </div>
                           </div>
                           {activeMitigationKey === 'salik-shift' && salikImpact && (
-                            <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Projection Impact: <strong style={{ color: 'var(--color-low)' }}>{salikImpact.reason}</strong>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '9.5px', marginTop: '2px' }}>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px' }}>{salikImpact.afterRisk} ({salikImpact.afterLevel})</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{salikImpact.afterRisk} ({salikImpact.afterLevel})</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>+{salikImpact.speedDeltaKph} kph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{salikImpact.speedDeltaKph} kph</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Volume shift</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>{salikImpact.volumeDeltaVph} vph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Volume shift</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>{salikImpact.volumeDeltaVph} vph</div>
                                 </div>
                               </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Option 5: Incident patrol responders */}
+                        {/* Option 5: Incident emergency responders */}
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'incident-response' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'incident-response' ? 'active' : ''} ${recommendedSimKey === 'incident-response' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'incident-response'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Zap size={12} className="text-primary" /> Incident Response
-                                  {recommendedSimKey === 'incident-response' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Dispatches RTA emergency patrol units to clear blocked lanes.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'incident-response'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Zap size={14} className="text-primary" /> Incident Response
+                                {recommendedSimKey === 'incident-response' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Dispatches RTA emergency patrol units to clear blocked lanes.
                               </div>
                             </div>
                           </div>
                           {activeMitigationKey === 'incident-response' && incidentImpact && (
-                            <div style={{ marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ marginTop: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                                 Projection Impact: <strong style={{ color: incidentImpact.applicable ? 'var(--color-low)' : 'var(--text-primary)' }}>{incidentImpact.reason}</strong>
                               </div>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '9.5px', marginTop: '2px' }}>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>After Score</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px' }}>{incidentImpact.afterRisk} ({incidentImpact.afterLevel})</div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>After Score</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', fontWeight: 700 }}>{incidentImpact.afterRisk} ({incidentImpact.afterLevel})</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Speed delta</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>+{incidentImpact.speedDeltaKph} kph</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Speed delta</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>+{incidentImpact.speedDeltaKph} kph</div>
                                 </div>
-                                <div className="telemetry-item" style={{ padding: '4px' }}>
-                                  <div className="telemetry-label" style={{ fontSize: '8px' }}>Road status</div>
-                                  <div className="telemetry-val" style={{ fontSize: '10.5px', color: 'var(--color-low)' }}>Quick clear</div>
+                                <div className="telemetry-item" style={{ padding: '6px' }}>
+                                  <div className="telemetry-label" style={{ fontSize: '11px' }}>Road status</div>
+                                  <div className="telemetry-val" style={{ fontSize: '14px', color: 'var(--color-low)', fontWeight: 700 }}>Quick clear</div>
                                 </div>
                               </div>
                             </div>
@@ -578,136 +601,68 @@ export default function Page() {
                         <div 
                           onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId]: 'monitor' }))}
                           className={`mitigation-action-card ${activeMitigationKey === 'monitor' ? 'active' : ''} ${recommendedSimKey === 'monitor' ? 'recommended-row' : ''}`}
+                          style={{ padding: '12px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)' }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input
-                                type="radio"
-                                name="mitigation"
-                                checked={activeMitigationKey === 'monitor'}
-                                onChange={() => {}}
-                              />
-                              <div>
-                                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-title)' }}>
-                                  <Activity size={12} className="text-primary" /> Monitor Only
-                                  {recommendedSimKey === 'monitor' && <span className="recommend-badge" style={{ fontSize: '7px', margin: 0 }}>Recommended</span>}
-                                </div>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  No dynamic actions are deployed at this time.
-                                </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                              type="radio"
+                              name="mitigation"
+                              checked={activeMitigationKey === 'monitor'}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-title)', fontSize: '15px' }}>
+                                <Activity size={14} className="text-primary" /> Monitor Only
+                                {recommendedSimKey === 'monitor' && <span className="recommend-badge" style={{ fontSize: '11px', margin: 0, padding: '2px 6px' }}>Recommended</span>}
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                No dynamic actions are deployed at this time.
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
-                    No corridor selected.
-                  </div>
-                )}
-              </div>
-            )}
 
-            {activeTab === 'briefing' && (
-              <div style={{ marginTop: '10px' }}>
-                <AiBriefingPanel 
-                  briefing={briefing}
-                  isGeneratingBrief={isGeneratingBrief}
-                  handleGenerateBriefing={handleGenerateBriefing}
-                  selectedCorridor={selectedCorridor}
-                  handleOperatorDecision={triggerDecision}
-                  formatBriefField={formatBriefField}
-                  buildSafeSituationSummary={buildSafeSituationSummary}
-                />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Column 3: Copilot Briefings & Approval (Width Adjusted) */}
-        <section className="panel" id="panel-briefing-outer" style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }}>
-          <div className="panel-header">
-            <h2 className="panel-title">
-              <History size={14} className="text-muted" /> Operations Room Logs
-            </h2>
-          </div>
-          <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {activeTab === 'overview' && (
-              <OperatorDecisionLog decisionLog={decisionLog} />
-            )}
-
-            {activeTab === 'map' && (
-              <TrafficRiskTable 
-                sortedCorridors={sortedCorridors}
-                selectedLocationId={selectedLocationId}
-                setSelectedLocationId={setSelectedLocationId}
-                activeScenarioId={activeScenarioId}
-                showTooltip={showTooltip}
-                setShowTooltip={setShowTooltip}
-                getRecommendedActionForCorridor={getRecommendedActionForCorridor}
-                showInfoFooter={false}
-              />
-            )}
-
-            {activeTab === 'forecast' && (
-              <>
-                {selectedLocationId && selectedCorridor ? (
-                  <div className="detail-card animate-fade-in" style={{ padding: '12px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px', marginBottom: '8px' }}>
-                      Explainable AI Forecast
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Predictive Window:</div>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>Next 30–60 Minutes</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>AI Confidence Level:</div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast?.forecast_confidence}%</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Contributing Factors:</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                          {selectedCorridor.forecast?.topContributingFeatures?.map((f: string, idx: number) => (
-                            <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '8.5px', padding: '2px 6px' }}>
-                              {f}
-                            </span>
-                          ))}
+                      {/* Mitigated Scenario Target Projection (Expected Impact Preview) */}
+                      {mitigatedData && (
+                        <div className="detail-card animate-fade-in" style={{ padding: '16px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '10px' }}>
+                          <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-title)', marginBottom: '6px' }}>
+                            Mitigated Scenario Target Projection
+                          </div>
+                          <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                            Applying <strong>{activeMitigationKey === 'route-advisory' ? 'Route Advisory' : activeMitigationKey === 'signal-timing' ? 'Signal Timing split overrides' : activeMitigationKey === 'metro-riders' ? 'Metro transit shifts' : activeMitigationKey === 'salik-shift' ? 'Salik pricing discounts' : activeMitigationKey === 'incident-response' ? 'Emergency responder dispatches' : 'Monitor Mode'}</strong> is projected to reduce corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
-                    No corridor selected.
-                  </div>
-                )}
-              </>
-            )}
-
-            {activeTab === 'whatif' && (
-              <>
-                {mitigatedData && (
-                  <div className="detail-card animate-fade-in" style={{ padding: '12px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '3px solid var(--rta-blue)', borderLeftWidth: '3px' }}>
-                    <div style={{ fontWeight: 700, fontSize: '11px', color: 'var(--text-title)', marginBottom: '4px' }}>
-                      Mitigated Scenario Target
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                      No corridor selected.
                     </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                      Applying **{activeMitigationKey}** is projected to reduce the corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
-                    </div>
-                  </div>
-                )}
-                <OperatorDecisionLog decisionLog={decisionLog} />
-              </>
+                  )}
+                </div>
+              </div>
             )}
 
             {activeTab === 'briefing' && (
-              <>
-                <PreventionImpactSummary approvedImpact={approvedImpact} />
-                <OperatorDecisionLog decisionLog={decisionLog} />
-              </>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-briefing-grid">
+                <div>
+                  <AiBriefingPanel 
+                    briefing={briefing}
+                    isGeneratingBrief={isGeneratingBrief}
+                    handleGenerateBriefing={handleGenerateBriefing}
+                    selectedCorridor={selectedCorridor}
+                    handleOperatorDecision={triggerDecision}
+                    formatBriefField={formatBriefField}
+                    buildSafeSituationSummary={buildSafeSituationSummary}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <PreventionImpactSummary approvedImpact={approvedImpact} />
+                  <OperatorDecisionLog decisionLog={decisionLog} />
+                </div>
+              </div>
             )}
           </div>
         </section>

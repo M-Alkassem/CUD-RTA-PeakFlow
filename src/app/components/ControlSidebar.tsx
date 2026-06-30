@@ -1,47 +1,62 @@
 import React from 'react';
-import { Sliders, Activity, History, Info, CheckCircle } from 'lucide-react';
+import { Sun, Moon, Info, CheckCircle } from 'lucide-react';
 import { Scenario } from '../lib/types';
 
 interface ControlSidebarProps {
   scenarios: Scenario[];
   activeScenarioId: string;
   handleLaunchScenario: (sc: Scenario) => void;
+  realTime: string;
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   scenarios,
   activeScenarioId,
-  handleLaunchScenario
+  handleLaunchScenario,
+  realTime,
+  theme,
+  toggleTheme
 }) => {
   return (
-    <aside className="panel" id="sidebar-scenarios">
-      <div className="panel-header">
-        <h2 className="panel-title">
-          <Sliders size={14} className="text-muted" /> Control Room Sidebar
-        </h2>
-      </div>
-      <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Command Room Sections */}
-        <div className="sidebar-nav-list" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-          <span className="kpi-title" style={{ fontSize: '9px', display: 'block', marginBottom: '6px', paddingLeft: '8px' }}>Console Modules</span>
-          <button className="sidebar-nav-item active">
-            <Activity size={13} /> Operations Console
-          </button>
-          <button 
-            className="sidebar-nav-item" 
-            onClick={() => {
-              const el = document.getElementById('decision-log-table');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            <History size={13} /> Decision Logs
-          </button>
+    <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)' }}>
+      {/* App Brand Header */}
+      <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', padding: '16px 16px 12px 16px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
+        <div className="rta-logo" style={{ fontSize: '15px', padding: '4px 8px', borderRadius: '4px', fontWeight: 800 }}>RTA</div>
+        <h1 className="console-title" style={{ fontSize: '30px', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em' }}>
+          PeakFlow Copilot
+        </h1>
+        <div style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+          Traffic Prevention Console
         </div>
+      </div>
 
+      {/* Clock and Theme Controls */}
+      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--bg-main)' }}>
+          <span className="status-dot active"></span>
+          TOC Time: {realTime || '00:00:00'}
+        </div>
+        <button 
+          onClick={toggleTheme}
+          className="theme-toggle-btn"
+          title="Toggle Theme"
+          style={{ cursor: 'pointer', padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', fontSize: '15px', fontWeight: 600, background: 'var(--bg-panel)' }}
+        >
+          {theme === 'dark' ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Sun size={14} className="text-primary" /> Light Mode</span>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Moon size={14} className="text-primary" /> Dark Mode</span>
+          )}
+        </button>
+      </div>
+
+      <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, padding: '16px', overflowY: 'auto' }}>
         {/* Scenario Launcher List */}
         <div>
-          <span className="kpi-title" style={{ fontSize: '9px', display: 'block', marginBottom: '8px', paddingLeft: '8px' }}>Simulation Replays</span>
-          <div className="scenario-list">
+          <span className="kpi-title" style={{ fontSize: '15px', display: 'block', marginBottom: '10px', paddingLeft: '4px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Simulation Replays</span>
+          <div className="scenario-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {scenarios.map(sc => {
               const isOptional = sc.id === 'rain-stress-test';
               const simplifiedSubtitle = {
@@ -57,26 +72,28 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
                   onClick={() => handleLaunchScenario(sc)}
                   className={`scenario-card ${isOptional ? 'optional' : ''} ${activeScenarioId === sc.id ? 'active' : ''}`}
                   id={`scenario-${sc.id}`}
+                  style={{ width: '100%', padding: '12px', textAlign: 'left', borderRadius: '8px', border: '1px solid var(--border-color)', background: activeScenarioId === sc.id ? 'var(--rta-blue-bg)' : 'var(--bg-panel)', borderColor: activeScenarioId === sc.id ? 'var(--rta-blue)' : 'var(--border-color)', transition: 'all 0.2s ease', cursor: 'pointer' }}
                 >
-                  <h4 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px' }}>
+                  <h4 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0 }}>
+                    <span style={{ fontSize: '15px', fontWeight: 700 }}>
                       {sc.id === 'rain-stress-test' ? 'Optional Resilience Test' : sc.title}
                     </span>
-                    {activeScenarioId === sc.id && <CheckCircle size={12} className="text-primary" />}
+                    {activeScenarioId === sc.id && <CheckCircle size={14} className="text-primary" />}
                   </h4>
-                  <p style={{ marginTop: '3px', fontSize: '10px', color: 'var(--text-secondary)' }}>{simplifiedSubtitle}</p>
+                  <p style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{simplifiedSubtitle}</p>
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto', padding: '12px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-          <div className="helper-text" style={{ fontWeight: 700, color: 'var(--text-title)', marginBottom: '4px' }}>
-            <Info size={12} /> System Instructions
+        {/* Instructions at the bottom */}
+        <div style={{ marginTop: 'auto', padding: '14px', background: 'var(--bg-main)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+          <div className="helper-text" style={{ fontWeight: 700, color: 'var(--text-title)', marginBottom: '6px', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Info size={14} /> Instructions
           </div>
-          <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            Replay data stream hour-by-hour. Click a corridor in the **Top Congestion Risks** list to inspect detailed metrics, simulate overrides, and request copilot operator briefs.
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
+            Select a simulation scenario. Click any road on the risks list or Live Map to diagnose metrics, test prevention actions, and request copilot briefs.
           </p>
         </div>
       </div>
