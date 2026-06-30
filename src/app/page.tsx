@@ -23,7 +23,7 @@ import { ControlSidebar } from './components/ControlSidebar';
 import { DashboardTabs } from './components/DashboardTabs';
 import { KpiCards } from './components/KpiCards';
 import { TrafficRiskTable } from './components/TrafficRiskTable';
-import { RoadNetworkMap } from './components/RoadNetworkMap';
+import { LiveMapTab } from './components/LiveMapTab';
 import { CorridorDetails } from './components/CorridorDetails';
 import { AiBriefingPanel } from './components/AiBriefingPanel';
 import { PreventionImpactSummary } from './components/PreventionImpactSummary';
@@ -283,14 +283,14 @@ export default function Page() {
             )}
 
             {activeTab === 'map' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <RoadNetworkMap 
-                  {...mapPanZoom}
-                  corridors={corridors}
-                  selectedLocationId={selectedLocationId}
-                  setSelectedLocationId={setSelectedLocationId}
-                />
-              </div>
+              <LiveMapTab 
+                corridors={corridors}
+                selectedLocationId={selectedLocationId}
+                setSelectedLocationId={setSelectedLocationId}
+                setActiveTab={setActiveTab}
+                theme={theme}
+                appliedActions={appliedActions}
+              />
             )}
 
             {activeTab === 'forecast' && (
