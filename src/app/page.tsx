@@ -238,7 +238,7 @@ export default function Page() {
 
   return (
     <div className="app-container">
-      <main className="dashboard-grid" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '320px 1fr' }}>
+      <main className="dashboard-grid" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '280px 1fr' }}>
         {/* Left Sidebar only for scenario selection */}
         <ControlSidebar 
           scenarios={scenarios} 
@@ -247,11 +247,61 @@ export default function Page() {
           realTime={realTime}
           theme={theme}
           toggleTheme={toggleTheme}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          selectedLocationId={selectedLocationId}
         />
 
         {/* Content Pane */}
-        <section className="panel" style={{ overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }} id="main-telemetry-content">
-          <div className="alert-bar" id="story-banner" style={{ fontSize: '16px', padding: '12px 16px', fontWeight: 500 }}>
+        <section className="panel" style={{ overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-main)' }} id="main-telemetry-content">
+          
+          {/* 1. Page Header with Title, Subtitle, and Clock controllers */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em' }}>
+                PeakFlow Operations Dashboard
+              </h2>
+              <p style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
+                Predict congestion, compare prevention options, and prepare AI-assisted operator briefings.
+              </p>
+            </div>
+            
+            {/* Clock Replay Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="status-badge" style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '6px', fontWeight: 600 }}>
+                Replay: {String(hour).padStart(2, '0')}:00
+              </div>
+              <button 
+                onClick={() => setIsPlaying(!isPlaying)} 
+                className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
+                style={{ padding: '8px 16px', fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '6px' }}
+              >
+                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                {isPlaying ? 'Pause Feed' : 'Start Feed'}
+              </button>
+              <button 
+                onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
+                className="btn-action secondary"
+                style={{ padding: '8px 16px', fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
+              >
+                <SkipForward size={14} /> +1 Hr Tick
+              </button>
+              
+              {/* Play Speed selector dropdown */}
+              <select 
+                value={playSpeed} 
+                onChange={(e) => setPlaySpeed(Number(e.target.value))}
+                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '6px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                <option value={8}>Speed: 8s</option>
+                <option value={4}>Speed: 4s</option>
+                <option value={2}>Speed: 2s</option>
+                <option value={1}>Speed: 1s</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="alert-bar" id="story-banner" style={{ fontSize: '15px', padding: '12px 16px', fontWeight: 500 }}>
             Analyze traffic data, identify congestion before it becomes critical, compare prevention options, and generate an AI operator briefing.
           </div>
 
@@ -261,7 +311,7 @@ export default function Page() {
             selectedLocationId={selectedLocationId}
           />
 
-          <div style={{ background: '#EBF5FF', borderLeft: '4px solid var(--rta-blue)', padding: '16px', borderRadius: '6px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--rta-blue)', padding: '16px 20px', borderRadius: '8px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
             <strong>Operational View Active:</strong> {activeScenarioId === 'pm-peak-demo' 
               ? 'PM peak pressure is building. The system ranks the highest-risk roads and recommends prevention actions before congestion becomes critical.' 
               : activeScenarioId === 'creek-crossing-demo'
@@ -274,39 +324,6 @@ export default function Page() {
           <div className="panel-content" style={{ overflowY: 'visible', paddingTop: 0, flex: 1 }}>
             {activeTab === 'overview' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Clock Replay Controls */}
-                <div className="detail-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button 
-                      onClick={() => setIsPlaying(!isPlaying)} 
-                      className={`btn-action ${isPlaying ? 'reject' : 'approve'}`}
-                      style={{ padding: '8px 16px', fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                      {isPlaying ? 'Pause Feed' : 'Start Feed'}
-                    </button>
-                    <button 
-                      onClick={() => setHour(h => h >= 23 ? 0 : h + 1)}
-                      className="btn-action secondary"
-                      style={{ padding: '8px 16px', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <SkipForward size={14} /> +1 Hr Tick
-                    </button>
-                    <div style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>
-                      Speed: <span style={{ fontWeight: 600 }}>{playSpeed}s/sim-hour</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={playSpeed}
-                    onChange={(e) => setPlaySpeed(Number(e.target.value))}
-                    title="Playback Speed"
-                    style={{ width: '120px', cursor: 'pointer' }}
-                  />
-                </div>
-
                 {/* KPI Metrics Group */}
                 <KpiCards kpis={kpis} hour={hour} />
 

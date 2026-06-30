@@ -3,8 +3,50 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-  /* HSL Color System - Clean Light Mode */
-  --bg-main: #F8FAFC; /* Light background slate */
+  /* HSL Color System - Default Dark Command Center Theme */
+  --bg-main: #07111F; 
+  --bg-panel: #0B1220;
+  --bg-card: #131C2E;
+  --bg-card-hover: #1e293b;
+  
+  --border-color: #243047;
+  --border-highlight: #0EA5E9;
+  
+  --text-title: #F8FAFC;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  
+  /* RTA Brand Core */
+  --rta-red: #E31B23; /* Primary RTA Red */
+  --rta-red-glow: rgba(227, 27, 35, 0.15);
+  
+  /* Selected / Active State (Neon Blue Accent) */
+  --rta-blue: #0EA5E9; 
+  --rta-blue-bg: rgba(14, 165, 233, 0.12);
+  --rta-blue-border: rgba(14, 165, 233, 0.35);
+  
+  /* Status indicators - strictly for risk levels */
+  --color-low: #22C55E;
+  --color-medium: #F59E0B;
+  --color-high: #F97316;
+  --color-critical: #EF4444;
+  
+  --font-display: var(--font-inter), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-focus: 0 0 18px rgba(14, 165, 233, 0.2);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  
+  --border-radius-card: 16px;
+}
+
+/* Light Mode Overrides (Optional fallback) */
+html.light, .light {
+  --bg-main: #F8FAFC; 
   --bg-panel: #FFFFFF;
   --bg-card: #FFFFFF;
   --bg-card-hover: #F1F5F9;
@@ -17,63 +59,20 @@
   --text-secondary: #475569;
   --text-muted: #64748b;
   
-  /* RTA Brand Core */
-  --rta-red: #E31B23; /* Primary RTA Red */
+  --rta-red: #E31B23;
   --rta-red-glow: rgba(227, 27, 35, 0.1);
   
-  /* Selected / Active State (RTA Blue) */
   --rta-blue: #007AFF; 
   --rta-blue-bg: #E8F2FF;
   --rta-blue-border: rgba(0, 122, 255, 0.3);
   
-  /* Status indicators - strictly for risk levels */
   --color-low: #28a745;
   --color-medium: #fd7e14;
   --color-high: #e67e22;
   --color-critical: #dc3545;
   
-  --font-display: var(--font-inter), sans-serif;
-  --font-body: var(--font-inter), sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   --shadow-focus: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-}
-
-/* Slick Dark Mode - TOC Command Center Palette */
-html.dark, .dark {
-  --bg-main: #060911; 
-  --bg-panel: #0c101d;
-  --bg-card: #121829;
-  --bg-card-hover: #1c243c;
-  
-  --border-color: rgba(255, 255, 255, 0.09);
-  --border-highlight: rgba(255, 255, 255, 0.16);
-  
-  --text-title: #F8FAFC;
-  --text-primary: #F1F5F9;
-  --text-secondary: #CBD5E1;
-  --text-muted: #8892b0;
-  
-  /* RTA Brand Core Glow */
-  --rta-red: #ff3b30;
-  --rta-red-glow: rgba(255, 59, 48, 0.15);
-  
-  /* Selected / Active State (Neon Blue) */
-  --rta-blue: #3b82f6; 
-  --rta-blue-bg: rgba(59, 130, 246, 0.12);
-  --rta-blue-border: rgba(59, 130, 246, 0.35);
-  
-  /* Status indicators - strictly for risk levels in dark mode */
-  --color-low: #10b981;
-  --color-medium: #f59e0b;
-  --color-high: #f97316;
-  --color-critical: #ef4444;
-  
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --shadow-focus: 0 0 18px rgba(59, 130, 246, 0.2);
 }
 
 /* Base resets & layouts */
@@ -1511,16 +1510,13 @@ body {
 /* Tab Bar Segmented Design */
 .main-tab-bar {
   display: flex !important;
-  background: #E2E8F0 !important; /* Premium segmented container background */
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  border-radius: 8px !important;
+  background: var(--bg-card) !important; /* Premium segmented dark container */
+  border: 1px solid var(--border-color) !important;
+  border-radius: 12px !important;
   padding: 4px !important;
   gap: 4px !important;
   box-shadow: none !important;
-  margin: 0 0 16px 0 !important;
-}
-.dark .main-tab-bar {
-  background: #0f1322 !important;
+  margin: 0 0 20px 0 !important;
 }
 
 .main-tab-btn {
@@ -1529,8 +1525,8 @@ body {
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  padding: 10px 16px !important;
-  border-radius: 6px !important;
+  padding: 12px 18px !important;
+  border-radius: 8px !important;
   border: none !important;
   background: transparent !important;
   color: var(--text-secondary) !important;
@@ -1542,17 +1538,14 @@ body {
 }
 
 .main-tab-btn:hover {
-  background: rgba(0, 0, 0, 0.03) !important;
-  color: var(--text-primary) !important;
-}
-.dark .main-tab-btn:hover {
   background: rgba(255, 255, 255, 0.03) !important;
+  color: var(--text-primary) !important;
 }
 
 .main-tab-btn.active {
-  background: var(--bg-card) !important;
-  color: var(--rta-blue) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background: var(--rta-blue) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3) !important;
 }
 
 /* Headings & Captions */
@@ -1570,16 +1563,13 @@ body {
   color: var(--text-title) !important;
 }
 
-/* Card Design Overrides */
+/* Card Design Overrides - Premium Rounded Command Center */
 .detail-card, .panel {
   background: var(--bg-panel) !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.01), 0 2px 4px -1px rgba(0, 0, 0, 0.01) !important;
-  padding: 20px !important;
-}
-.dark .detail-card, .dark .panel {
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--border-radius-card) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+  padding: 24px !important;
 }
 
 /* Body / explanation text sizes: 16px */
@@ -1599,39 +1589,64 @@ p, .helper-text, .telemetry-label, .map-html-tooltip-row {
 .btn-action, .sidebar-nav-item {
   font-size: 15px !important;
   font-weight: 700 !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   font-family: var(--font-inter), sans-serif !important;
-  padding: 10px 18px !important;
+  padding: 12px 20px !important;
 }
 
 .scenario-card {
   font-size: 15px !important;
   font-weight: 700 !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   font-family: var(--font-inter), sans-serif !important;
   padding: 12px 16px !important;
   border: 1px solid var(--border-color) !important;
-  background: var(--bg-panel) !important;
+  background: var(--bg-main) !important;
   transition: all 0.15s ease !important;
 }
 
 .scenario-card.active {
-  background: rgba(0, 122, 255, 0.04) !important;
+  background: var(--rta-blue-bg) !important;
   border-color: var(--rta-blue) !important;
   border-left: 4px solid var(--rta-blue) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
 }
 .scenario-card.active h4 {
   color: var(--rta-blue) !important;
 }
 
-/* Clean, simplified 2-column layout spacing - 300px Sidebar */
+/* Clean, simplified 2-column layout spacing - 280px Sidebar */
 .dashboard-grid {
   display: grid !important;
-  grid-template-columns: 300px 1fr !important;
-  gap: 20px !important;
-  padding: 20px !important;
+  grid-template-columns: 280px 1fr !important;
+  gap: 24px !important;
+  padding: 24px !important;
   height: 100vh !important;
+}
+
+/* Scrollbars styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rta-blue);
+}
+
+/* High Contrast UI Alert bar */
+.alert-bar {
+  background: rgba(14, 165, 233, 0.08) !important;
+  border: 1px solid rgba(14, 165, 233, 0.25) !important;
+  color: var(--text-primary) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 /* ==========================================
@@ -1676,37 +1691,10 @@ p, .helper-text, .telemetry-label, .map-html-tooltip-row {
 
 .custom-leaflet-marker.risk-high {
   background-color: var(--color-high) !important;
-  animation: marker-pulse-amber 2s infinite ease-in-out !important;
 }
 
 .custom-leaflet-marker.risk-critical {
   background-color: var(--color-critical) !important;
-  animation: marker-pulse-red 1.5s infinite ease-in-out !important;
-}
-
-/* Marker pulsing keyframes */
-@keyframes marker-pulse-amber {
-  0% {
-    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.6), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
-}
-
-@keyframes marker-pulse-red {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 4px 6px rgba(0,0,0,0.2), 0 0 0 2px white;
-  }
 }
 
 /* High Contrast Leaflet Tooltips & Popups */

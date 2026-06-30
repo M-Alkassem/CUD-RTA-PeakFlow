@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { ThemeMode } from '../lib/types';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<ThemeMode>('light');
+  const [theme, setTheme] = useState<ThemeMode>('dark');
   const [realTime, setRealTime] = useState('');
 
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
+      root.classList.remove('light');
     } else {
+      root.classList.add('light');
       root.classList.remove('dark');
     }
   }, [theme]);
