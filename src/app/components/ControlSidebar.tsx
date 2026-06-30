@@ -20,11 +20,11 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   toggleTheme
 }) => {
   return (
-    <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)' }}>
+    <aside className="panel" id="sidebar-scenarios" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRight: '1px solid var(--border-color)', padding: '20px' }}>
       {/* App Brand Header */}
-      <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', padding: '16px 16px 12px 16px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
+      <div className="brand-section" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', width: '100%' }}>
         <div className="rta-logo" style={{ fontSize: '15px', padding: '4px 8px', borderRadius: '4px', fontWeight: 800 }}>RTA</div>
-        <h1 className="console-title" style={{ fontSize: '30px', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em' }}>
+        <h1 className="console-title" style={{ fontSize: '28px', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.03em' }}>
           PeakFlow Copilot
         </h1>
         <div style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: 500 }}>
@@ -33,8 +33,8 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
       </div>
 
       {/* Clock and Theme Controls */}
-      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
-        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--bg-main)' }}>
+      <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="status-badge" style={{ textTransform: 'none', fontFamily: 'var(--font-mono)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-main)' }}>
           <span className="status-dot active"></span>
           TOC Time: {realTime || '00:00:00'}
         </div>
@@ -52,10 +52,10 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
         </button>
       </div>
 
-      <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, padding: '16px', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, paddingTop: '16px', overflowY: 'auto' }}>
         {/* Scenario Launcher List */}
         <div>
-          <span className="kpi-title" style={{ fontSize: '15px', display: 'block', marginBottom: '10px', paddingLeft: '4px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Simulation Replays</span>
+          <span className="kpi-title" style={{ fontSize: '14px', display: 'block', marginBottom: '10px', paddingLeft: '4px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Simulation Replays</span>
           <div className="scenario-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {scenarios.map(sc => {
               const isOptional = sc.id === 'rain-stress-test';
@@ -72,7 +72,7 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
                   onClick={() => handleLaunchScenario(sc)}
                   className={`scenario-card ${isOptional ? 'optional' : ''} ${activeScenarioId === sc.id ? 'active' : ''}`}
                   id={`scenario-${sc.id}`}
-                  style={{ width: '100%', padding: '12px', textAlign: 'left', borderRadius: '8px', border: '1px solid var(--border-color)', background: activeScenarioId === sc.id ? 'var(--rta-blue-bg)' : 'var(--bg-panel)', borderColor: activeScenarioId === sc.id ? 'var(--rta-blue)' : 'var(--border-color)', transition: 'all 0.2s ease', cursor: 'pointer' }}
+                  style={{ width: '100%', cursor: 'pointer' }}
                 >
                   <h4 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0 }}>
                     <span style={{ fontSize: '15px', fontWeight: 700 }}>
