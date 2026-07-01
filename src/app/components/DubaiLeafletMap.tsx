@@ -30,6 +30,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const markerGroupRef = useRef<L.LayerGroup | null>(null);
+  const polylinesRef = useRef<L.Polyline[]>([]);
 
   const validHotspots = getValidDubaiHotspots(corridors);
 
@@ -174,6 +175,140 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       }
     });
   }, [selectedLocationId, viewMode]);
+
+  // 5. Draw Road Polylines and Suggested Alternative Route overlays
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || viewMode !== 'gis') return;
+
+    // Clear old polylines
+    polylinesRef.current.forEach(p => p.remove());
+    polylinesRef.current = [];
+
+    // Define coordinates paths
+    const paths = {
+      SZR: [
+        [25.1178, 55.2012], // MOE
+        [25.1600, 55.2400], // Safa
+        [25.2110, 55.2790], // DIFC
+        [25.2230, 55.2820]  // Defence
+      ],
+      EKR: [
+        [25.1490, 55.2350], // Al Quoz
+        [25.1680, 55.2500],
+        [25.1860, 55.2700]  // Business Bay
+      ],
+      JBR: [
+        [25.0800, 55.1400], // Marina
+        [25.1180, 55.1900],
+        [25.1500, 55.2200],
+        [25.2080, 55.2480]  // JBR
+      ],
+      ITT: [
+        [25.2680, 55.3380], // Qiyadah
+        [25.2950, 55.3550]  // Mamzar
+      ],
+      GAR: [
+        [25.2200, 55.3280],
+        [25.2330, 55.3300],
+        [25.2450, 55.3320]
+      ],
+      MAK: [
+        [25.2300, 55.3150],
+        [25.2400, 55.3170],
+        [25.2500, 55.3200]
+      ],
+      BBC: [
+        [25.1800, 55.2850],
+        [25.1920, 55.2900],
+        [25.2050, 55.2950]
+      ]
+    };
+
+    const getColorForScore = (s: number) => {
+      if (s >= 80) return '#ef4444'; // Red
+      if (s >= 60) return '#f97316'; // Orange
+      if (s >= 40) return '#eab308'; // Amber
+      return '#22c55e'; // Emerald green
+    };
+
+    // Calculate max scores to color main roads
+    const getScoreForPrefix = (prefix: string) => {
+      const matches = corridors.filter(c => c.location_id.startsWith(prefix));
+      if (matches.length === 0) return 0;
+      return Math.max(...matches.map(m => m.congestion_pressure_score));
+    };
+
+    const scores = {
+      SZR: getScoreForPrefix('SZR'),
+      EKR: getScoreForPrefix('EKR'),
+      JBR: getScoreForPrefix('JBR'),
+      ITT: getScoreForPrefix('ITT'),
+      GAR: getScoreForPrefix('GAR'),
+      MAK: getScoreForPrefix('MAK'),
+      BBC: getScoreForPrefix('BBC')
+    };
+
+    // Draw main roads
+    Object.entries(paths).forEach(([roadKey, coords]) => {
+      const score = scores[roadKey as keyof typeof scores] || 20;
+      const color = getColorForScore(score);
+      
+      const polyline = L.polyline(coords as L.LatLngExpression[], {
+        color: color,
+        weight: 6,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      // Bind tooltip for road name & current congestion
+      polyline.bindTooltip(`${roadKey} Corridor: Congestion Score ${score}/100`, { sticky: true });
+      polylinesRef.current.push(polyline);
+    });
+
+    // Draw Suggested Alternative Route Overlay if bottleneck selected
+    if (selectedLocationId) {
+      let altPath: L.LatLngExpression[] = [];
+      let label = "";
+
+      if (selectedLocationId.startsWith('SZR') && scores.SZR >= 40) {
+        // Recommend Al Khail Road (EKR) as alternative bypass
+        altPath = [
+          [25.1178, 55.2012], // SZR start
+          [25.1300, 55.2150], // bypass link
+          [25.1490, 55.2350], // EKR start
+          [25.1680, 55.2500],
+          [25.1860, 55.2700]  // EKR Business Bay
+        ];
+        label = "AI Suggestion: Bypass SZR Congestion via Al Khail Rd (EKR)";
+      } 
+      else if (selectedLocationId === 'GAR_N1' && scores.GAR >= 40) {
+        // Recommend Business Bay Crossing (BBC)
+        altPath = [
+          [25.2100, 55.3350],
+          [25.2050, 55.2950], // BBC bypass Link
+          [25.1920, 55.2900], 
+          [25.1800, 55.2850]
+        ];
+        label = "AI Suggestion: Bypass Garhoud Bridge via Business Bay Crossing (BBC)";
+      }
+
+      if (altPath.length > 0) {
+        const altPolyline = L.polyline(altPath, {
+          color: '#06b6d4', // Bright neon cyan/blue
+          weight: 4,
+          opacity: 0.9,
+          dashArray: '8, 12',
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+
+        altPolyline.bindTooltip(label, { permanent: true, direction: 'top', className: 'ai-map-tooltip' });
+        polylinesRef.current.push(altPolyline);
+      }
+    }
+  }, [corridors, selectedLocationId, viewMode]);
 
   // Tactical SVG Coordinates mappings for Dubai Road schematic
   const tacticalNodes = [
