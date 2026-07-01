@@ -6,6 +6,7 @@ import {
   getCoordinatesForCorridor, 
   getValidDubaiHotspots 
 } from '../lib/mapCoordinates';
+import { Navigation, Compass, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface DubaiLeafletMapProps {
   corridors: Corridor[];
@@ -34,6 +35,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   const badgeMarkersRef = useRef<L.Marker[]>([]);
 
   const validHotspots = getValidDubaiHotspots(corridors);
+  const selectedCorridor = corridors.find(c => c.location_id === selectedLocationId) || null;
 
   // 1. GIS Leaflet Map Mount/Destroy Cycle
   useEffect(() => {
@@ -116,13 +118,20 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       else if (score >= 40) { riskClass = 'risk-medium'; riskLevel = 'Medium'; }
 
       const isSelected = cor.location_id === selectedLocationId;
-      const className = `custom-leaflet-marker ${riskClass} ${isSelected ? 'selected' : ''}`;
+
+      // Small elegant dot style instead of blocky numbers
+      const color = score >= 80 ? 'var(--color-critical)' : score >= 60 ? 'var(--color-high)' : score >= 40 ? 'var(--color-medium)' : 'var(--color-low)';
+      const size = isSelected ? 16 : 10;
+      const borderSize = isSelected ? 3 : 2;
+      const shadow = isSelected ? '0 0 10px rgba(14,165,233,0.8)' : '0 2px 4px rgba(0,0,0,0.3)';
+
+      const html = `<div style="width: ${size}px; height: ${size}px; border-radius: 50%; border: ${borderSize}px solid white; box-shadow: ${shadow}; background-color: ${color}; transition: all 0.2s ease;"></div>`;
 
       const icon = L.divIcon({
-        className,
-        html: `<span>${score}</span>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        className: `custom-glowing-dot ${isSelected ? 'selected' : ''}`,
+        html: html,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
       });
 
       const popupHtml = `
@@ -177,6 +186,13 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     });
   }, [selectedLocationId, viewMode]);
 
+  // Dynamic routing parameters matching Waze options
+  let showRouting = false;
+  let roadNameText = "";
+  let altRoadNameText = "";
+  let congestedTimeText = "";
+  let alternateTimeText = "";
+
   // 5. Draw Road Polylines and Suggested Alternative Route overlays
   useEffect(() => {
     const map = mapRef.current;
@@ -191,7 +207,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     badgeMarkersRef.current = [];
 
     // High-Fidelity Curved Coordinate Paths tracing real Dubai highways
-    const paths = {
+    const paths: { [key: string]: L.LatLngTuple[] } = {
       SZR: [
         [25.0750, 55.1380], // Marina / JLT
         [25.0930, 55.1610], // Barsha Heights
@@ -266,84 +282,130 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       BBC: getScoreForPrefix('BBC')
     };
 
-    // Draw main roads
+    // Draw main roads (if no specific route is shown, or as background lines)
     Object.entries(paths).forEach(([roadKey, coords]) => {
       const score = scores[roadKey as keyof typeof scores] || 20;
       const color = getColorForScore(score);
       
       const polyline = L.polyline(coords as L.LatLngExpression[], {
         color: color,
-        weight: 6,
-        opacity: 0.8,
+        weight: 5,
+        opacity: 0.6,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(map);
 
-      // Bind tooltip for road name & current congestion
       polyline.bindTooltip(`${roadKey} Corridor: Congestion Score ${score}/100`, { sticky: true });
       polylinesRef.current.push(polyline);
     });
 
     // Draw Suggested Alternative Route Overlay if bottleneck selected
     if (selectedLocationId) {
-      let altPath: L.LatLngExpression[] = [];
-      let label = "";
+      let mainRoutePath: L.LatLngTuple[] = [];
+      let altPath: L.LatLngTuple[] = [];
       let congestedBadgeCoords: [number, number] = [0, 0];
       let alternateBadgeCoords: [number, number] = [0, 0];
       let congestedBadgeText = "";
       let alternateBadgeText = "";
+      let startPoint: [number, number] = [0, 0];
+      let endPoint: [number, number] = [0, 0];
 
-      if (selectedLocationId.startsWith('SZR') && scores.SZR >= 40) {
-        // Recommend Al Khail Road (EKR) as alternative bypass
+      if (selectedLocationId.startsWith('SZR')) {
+        mainRoutePath = paths.SZR;
         altPath = [
-          [25.1180, 55.2000], // SZR MOE
-          [25.1220, 55.2100], // link road
-          [25.1250, 55.2200], // Al Quoz link
-          [25.1490, 55.2350], // EKR E44 path
+          [25.1180, 55.2000], // Start at MOE SZR
+          [25.1220, 55.2080], // Link
+          [25.1250, 55.2200], // Al Quoz
+          [25.1490, 55.2350], // E44 Al Khail Road
           [25.1630, 55.2530],
-          [25.1860, 55.2700]  // EKR Business Bay
+          [25.1860, 55.2700],
+          [25.1960, 55.2880],
+          [25.2080, 55.3020], // link back
+          [25.2230, 55.2820]  // Defence
         ];
-        label = "AI Alternate Route: E44 Al Khail Road (Low Congestion)";
-        congestedBadgeCoords = [25.1610, 55.2390]; // Safa Park
-        congestedBadgeText = "SZR (E11): 45m (Delay +18m)";
-        alternateBadgeCoords = [25.1630, 55.2530]; // EKR middle
-        alternateBadgeText = "Al Khail (E44): 24m (Best Route)";
+        congestedBadgeCoords = [25.1610, 55.2390]; // Safa
+        congestedBadgeText = "SZR (E11): 45m (Slow)";
+        alternateBadgeCoords = [25.1630, 55.2530]; // EKR
+        alternateBadgeText = "Al Khail (E44): 24m (Fastest)";
+        startPoint = [25.1180, 55.2000];
+        endPoint = [25.2230, 55.2820];
       } 
-      else if (selectedLocationId === 'GAR_N1' && scores.GAR >= 40) {
-        // Recommend Business Bay Crossing (BBC)
+      else if (selectedLocationId.startsWith('EKR')) {
+        mainRoutePath = paths.EKR;
+        altPath = [
+          [25.1490, 55.2350], // EKR
+          [25.1400, 55.2320],
+          [25.1250, 55.2200], // link
+          [25.1180, 55.2000], // SZR
+          [25.1430, 55.2220],
+          [25.1610, 55.2390],
+          [25.1760, 55.2510],
+          [25.2010, 55.2700],
+          [25.2190, 55.3130]
+        ];
+        congestedBadgeCoords = [25.1630, 55.2530];
+        congestedBadgeText = "Al Khail (E44): 38m (Moderate)";
+        alternateBadgeCoords = [25.1610, 55.2390];
+        alternateBadgeText = "SZR (E11): 26m (Best Route)";
+        startPoint = [25.1490, 55.2350];
+        endPoint = [25.2190, 55.3130];
+      }
+      else if (selectedLocationId.startsWith('GAR')) {
+        mainRoutePath = paths.GAR;
         altPath = [
           [25.2200, 55.3230], // Oud Metha
           [25.2050, 55.2950], // Link to BBC
           [25.1920, 55.2900], // BBC bridge
-          [25.1780, 55.3150]  // Ras Al Khor
+          [25.2450, 55.3380]
         ];
-        label = "AI Alternate Route: Business Bay Crossing (Low Congestion)";
-        congestedBadgeCoords = [25.2330, 55.3300]; // Garhoud Bridge
-        congestedBadgeText = "Garhoud Br: 28m (Delay +12m)";
-        alternateBadgeCoords = [25.1920, 55.2900]; // BBC Bridge
-        alternateBadgeText = "BB Crossing: 16m (Best Route)";
+        congestedBadgeCoords = [25.2330, 55.3300];
+        congestedBadgeText = "Garhoud Bridge: 28m (Slow)";
+        alternateBadgeCoords = [25.1920, 55.2900];
+        alternateBadgeText = "BB Crossing: 16m (Fastest)";
+        startPoint = [25.2200, 55.3230];
+        endPoint = [25.2450, 55.3380];
+      }
+      else if (selectedLocationId.startsWith('BBC') || selectedLocationId.startsWith('MAK')) {
+        mainRoutePath = selectedLocationId.startsWith('BBC') ? paths.BBC : paths.MAK;
+        altPath = paths.GAR;
+        congestedBadgeCoords = selectedLocationId.startsWith('BBC') ? [25.1920, 55.2900] : [25.2400, 55.3170];
+        congestedBadgeText = selectedLocationId.startsWith('BBC') ? "BB Crossing: 22m" : "Maktoum Br: 20m";
+        alternateBadgeCoords = [25.2330, 55.3300];
+        alternateBadgeText = "Garhoud Br: 14m (Best route)";
+        startPoint = selectedLocationId.startsWith('BBC') ? [25.1780, 55.3150] : [25.2330, 55.3130];
+        endPoint = [25.2450, 55.3380];
+      }
+
+      if (mainRoutePath.length > 0) {
+        // Draw active selected main path in high-visibility purple/red (congested style)
+        const mainPolyline = L.polyline(mainRoutePath, {
+          color: '#8b5cf6', // Indigo/purple
+          weight: 8,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(map);
+        polylinesRef.current.push(mainPolyline);
       }
 
       if (altPath.length > 0) {
+        // Draw alternate path in glowing neon green/cyan
         const altPolyline = L.polyline(altPath, {
-          color: '#10b981', // Emerald Green for suggested route path
-          weight: 5,
+          color: '#10b981', // Waze green
+          weight: 7,
           opacity: 0.9,
           dashArray: '8, 12',
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(map);
-
-        altPolyline.bindTooltip(label, { permanent: true, direction: 'top', className: 'ai-map-tooltip' });
         polylinesRef.current.push(altPolyline);
 
-        // Add Waze-style floating HTML badges at route centers
+        // Add Waze-style floating HTML duration speech bubbles
         if (congestedBadgeCoords[0] > 0) {
-          const congestedHtml = `<div style="background: #ef4444; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${congestedBadgeText}</div>`;
           const cMarker = L.marker(congestedBadgeCoords, {
             icon: L.divIcon({
               className: 'waze-congested-badge',
-              html: congestedHtml,
+              html: `<div style="background: #ef4444; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${congestedBadgeText}</div>`,
               iconSize: [160, 30],
               iconAnchor: [80, 15]
             })
@@ -352,20 +414,80 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
         }
 
         if (alternateBadgeCoords[0] > 0) {
-          const alternateHtml = `<div style="background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${alternateBadgeText}</div>`;
           const aMarker = L.marker(alternateBadgeCoords, {
             icon: L.divIcon({
               className: 'waze-alternate-badge',
-              html: alternateHtml,
+              html: `<div style="background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${alternateBadgeText}</div>`,
               iconSize: [170, 30],
               iconAnchor: [85, 15]
             })
           }).addTo(map);
           badgeMarkersRef.current.push(aMarker);
         }
+
+        // Add start pin (pulsing GPS blue dot)
+        if (startPoint[0] > 0) {
+          const startMarker = L.marker(startPoint, {
+            icon: L.divIcon({
+              className: 'gps-pulse-marker',
+              html: `
+                <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
+                  <div style="position: absolute; width: 20px; height: 20px; background: rgba(14, 165, 233, 0.4); border-radius: 50%; animation: pulse-gps 1.5s infinite;"></div>
+                  <div style="width: 10px; height: 10px; background: #0ea5e9; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 6px #0ea5e9; z-index: 2;"></div>
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            })
+          }).addTo(map);
+          badgeMarkersRef.current.push(startMarker);
+        }
+
+        // Add end pin (checkered flag)
+        if (endPoint[0] > 0) {
+          const endMarker = L.marker(endPoint, {
+            icon: L.divIcon({
+              className: 'checkered-flag-marker',
+              html: `
+                <div style="background: white; border: 1.5px solid #000; border-radius: 4px; padding: 3px 6px; font-size: 13px; font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 4px; white-space: nowrap; font-family: var(--font-display);">
+                  🏁 Finish
+                </div>
+              `,
+              iconSize: [60, 24],
+              iconAnchor: [30, 24]
+            })
+          }).addTo(map);
+          badgeMarkersRef.current.push(endMarker);
+        }
       }
     }
   }, [corridors, selectedLocationId, viewMode]);
+
+  // Set routing parameters for the overlay card
+  if (selectedLocationId) {
+    showRouting = true;
+    if (selectedLocationId.startsWith('SZR')) {
+      roadNameText = "SZR (E11) — Southbound";
+      altRoadNameText = "Al Khail Road (E44)";
+      congestedTimeText = "45 min";
+      alternateTimeText = "24 min";
+    } else if (selectedLocationId.startsWith('EKR')) {
+      roadNameText = "Al Khail Road (E44)";
+      altRoadNameText = "SZR (E11)";
+      congestedTimeText = "38 min";
+      alternateTimeText = "26 min";
+    } else if (selectedLocationId.startsWith('GAR')) {
+      roadNameText = "Al Garhoud Bridge";
+      altRoadNameText = "Business Bay Crossing";
+      congestedTimeText = "28 min";
+      alternateTimeText = "16 min";
+    } else if (selectedLocationId.startsWith('BBC') || selectedLocationId.startsWith('MAK')) {
+      roadNameText = selectedLocationId.startsWith('BBC') ? "Business Bay Crossing" : "Al Maktoum Bridge";
+      altRoadNameText = "Al Garhoud Bridge";
+      congestedTimeText = "22 min";
+      alternateTimeText = "14 min";
+    }
+  }
 
   // Tactical SVG Coordinates mappings for Dubai Road schematic
   const tacticalNodes = [
@@ -450,27 +572,19 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
             <path d="M 380,40 C 450,150 520,280 580,450" fill="none" stroke="rgba(14, 165, 233, 0.4)" strokeWidth="4" strokeLinecap="round" />
 
             {/* Glowing Dubai Highway Corridors */}
-            {/* 1. Sheikh Zayed Road */}
             <path id="szr_path" d="M 100,450 C 300,380 500,200 700,80" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" strokeLinecap="round" />
             <path d="M 100,450 C 300,380 500,200 700,80" fill="none" stroke="rgba(14, 165, 233, 0.7)" strokeWidth="2" strokeLinecap="round" />
-            {/* Animated Traffic density pulses */}
             <path d="M 100,450 C 300,380 500,200 700,80" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" className="pulse-flow-line" style={{ strokeDasharray: '10, 20', animation: 'dash 3s linear infinite' }} />
 
-            {/* 2. Al Khail Road */}
             <path d="M 150,500 C 320,430 480,270 650,150" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" strokeLinecap="round" />
             <path d="M 150,500 C 320,430 480,270 650,150" fill="none" stroke="rgba(14, 165, 233, 0.5)" strokeWidth="2" strokeLinecap="round" />
             <path d="M 150,500 C 320,430 480,270 650,150" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" className="pulse-flow-line" style={{ strokeDasharray: '8, 25', animation: 'dash 4s linear infinite' }} />
 
-            {/* 3. Al Ittihad Road */}
             <path d="M 600,100 C 650,80 720,50 780,40" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" strokeLinecap="round" />
             <path d="M 600,100 C 650,80 720,50 780,40" fill="none" stroke="rgba(14, 165, 233, 0.6)" strokeWidth="2" strokeLinecap="round" />
 
-            {/* Creek Crossing Bridges links */}
-            {/* Al Garhoud Bridge */}
             <line x1="430" y1="230" x2="530" y2="210" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="6" />
-            {/* Al Maktoum Bridge */}
             <line x1="410" y1="130" x2="510" y2="110" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="6" />
-            {/* Business Bay Crossing */}
             <line x1="470" y1="330" x2="570" y2="310" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="6" />
 
             {/* Render Glowing Hotspots Node Markers */}
@@ -492,19 +606,14 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
                   style={{ cursor: 'pointer' }}
                   onClick={() => setSelectedLocationId(node.id)}
                 >
-                  {/* Selected Outer highlight circle */}
                   {isSelected && (
                     <circle cx={node.x} cy={node.y} r="22" fill="none" stroke="var(--rta-blue)" strokeWidth="2" style={{ opacity: 0.8 }} />
                   )}
-                  {/* Hotspot Outer Glow ring */}
                   <circle cx={node.x} cy={node.y} r="14" fill="none" stroke={color} strokeWidth="2" style={{ opacity: 0.4 }} />
-                  {/* Hotspot Inner Solid core */}
                   <circle cx={node.x} cy={node.y} r="10" fill={color} />
-                  {/* Risk score value inside node */}
                   <text x={node.x} y={node.y + 4} textAnchor="middle" fill="white" style={{ fontSize: '10px', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
                     {score}
                   </text>
-                  {/* Label tooltip text */}
                   {isSelected && (
                     <g>
                       <rect x={node.x - 70} y={node.y - 45} width="140" height="24" rx="4" fill="var(--bg-panel)" stroke="var(--border-color)" strokeWidth="1" />
@@ -543,7 +652,6 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
             );
           })()}
 
-          {/* Custom style overrides for animated paths */}
           <style>{`
             @keyframes dash {
               to {
@@ -565,28 +673,160 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
             <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} id="dubai-leaflet-map" />
           )}
 
-          {/* Floating GIS Controls */}
-          {validHotspots.length > 0 && (
-            <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 1000, display: 'flex', gap: '8px' }}>
+          {/* Premium Google Maps / Waze style Routing overlay card */}
+          <div 
+            style={{ 
+              position: 'absolute', 
+              bottom: '24px', 
+              left: '24px', 
+              zIndex: 1000, 
+              background: 'rgba(15, 23, 42, 0.93)', 
+              backdropFilter: 'blur(10px)', 
+              border: '1px solid rgba(255, 255, 255, 0.1)', 
+              borderRadius: '16px', 
+              padding: '18px', 
+              width: '330px', 
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              color: 'white'
+            }}
+          >
+            {/* Header info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
+              <Navigation size={18} className="text-secondary" style={{ color: 'var(--rta-blue)' }} />
+              <div>
+                <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>AI Routing Analyst</span>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-title)' }}>
+                  {selectedCorridor ? 'Bypass Suggestions' : 'Dubai Traffic Network'}
+                </div>
+              </div>
+            </div>
+
+            {/* Routing state details */}
+            {showRouting && selectedCorridor ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* 1. Recommended Route Option */}
+                <div style={{ display: 'flex', gap: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', marginTop: '5px' }}></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'white' }}>{altRoadNameText}</span>
+                      <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#10b981' }}>{alternateTimeText}</span>
+                    </div>
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Fastest route, AI optimization suggested</span>
+                  </div>
+                </div>
+
+                {/* 2. Congested Route Option */}
+                <div style={{ display: 'flex', gap: '10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', marginTop: '5px' }}></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'rgba(255,255,255,0.8)' }}>{roadNameText}</span>
+                      <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#ef4444' }}>{congestedTimeText}</span>
+                    </div>
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Traffic congestion bottleneck</span>
+                  </div>
+                </div>
+
+                {/* Apply Suggestion Action trigger */}
+                <button
+                  onClick={() => {
+                    const forecastTabBtn = document.querySelector('button[class*="main-tab-btn"]') as HTMLButtonElement;
+                    if (forecastTabBtn) {
+                      // Navigate directly to trigger actions
+                      const btns = Array.from(document.querySelectorAll('button'));
+                      const triggerBtn = btns.find(b => b.textContent?.includes('Open Detailed Diagnostics'));
+                      if (triggerBtn) triggerBtn.click();
+                    }
+                  }}
+                  style={{
+                    background: 'var(--rta-blue)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '10px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  className="waze-apply-btn"
+                >
+                  <Compass size={14} /> Open Actions & Optimization
+                </button>
+
+              </div>
+            ) : (
+              // Empty State prompt
+              <div style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} style={{ color: 'var(--rta-blue)', flexShrink: 0 }} />
+                <span>Select any active road hotspot pin on the map to calculate alternative AI routing detours.</span>
+              </div>
+            )}
+
+            {/* Bottom Actions Row */}
+            <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', marginTop: '4px' }}>
               <button 
                 onClick={handleResetView}
-                className="map-control-wide-btn"
-                style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
               >
-                Reset View
+                <RefreshCw size={12} /> Reset View
               </button>
               <button 
                 onClick={handleFitHotspots}
-                className="map-control-wide-btn"
-                style={{ padding: '8px 14px', fontSize: '14px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer', height: 'auto', textTransform: 'none' }}
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'white',
+                  borderRadius: '6px',
+                  padding: '6px 10px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}
               >
                 Fit Hotspots
               </button>
             </div>
-          )}
+
+          </div>
         </div>
       )}
 
+      {/* Floating GPS pulse styling keyframes */}
+      <style>{`
+        @keyframes pulse-gps {
+          0% { transform: scale(0.6); opacity: 0.8; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 };
