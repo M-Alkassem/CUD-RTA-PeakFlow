@@ -43,7 +43,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
         center: [25.2048, 55.2708],
         zoom: 11,
         zoomControl: false,
-        preferCanvas: true,
+        preferCanvas: false,
         zoomAnimation: true,
         markerZoomAnimation: true,
         fadeAnimation: true
