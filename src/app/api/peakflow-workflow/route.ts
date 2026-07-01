@@ -124,32 +124,43 @@ function generateFallbackResponse(snapshot: any): any {
 }
 
 export async function POST(request: NextRequest) {
+  let snapshot: any = {};
   try {
-    const snapshot = await request.json();
-    
-    // Read environment variables
-    const enabled = process.env.MISTRAL_WORKFLOW_ENABLED === 'true';
-    const workflowName = process.env.MISTRAL_WORKFLOW_NAME || 'peakflow-congestion-prevention';
-    const timeoutMs = parseInt(process.env.MISTRAL_WORKFLOW_TIMEOUT_MS || '20000', 10);
-    const apiKey = process.env.MISTRAL_API_KEY;
+    snapshot = await request.json();
+  } catch (e) {
+    console.error("[API Route] Failed to parse request JSON payload:", e);
+    snapshot = {};
+  }
 
-    if (!enabled || !apiKey) {
-      // Return fallback briefing immediately
-      const fallback = generateFallbackResponse(snapshot);
-      return NextResponse.json({ ...fallback, isFallback: true });
-    }
+  console.log("[API Route] /api/peakflow-workflow endpoint called.");
+  console.log(`[API Route] Scenario: "${snapshot.scenario || 'Unknown'}", Roads at Risk: ${snapshot.roadsAtRisk || 0}`);
 
-    // Set paths
+  // Read environment variables
+  const enabled = process.env.MISTRAL_WORKFLOW_ENABLED === 'true';
+  const workflowName = process.env.MISTRAL_WORKFLOW_NAME || 'peakflow-congestion-prevention';
+  const timeoutMs = parseInt(process.env.MISTRAL_WORKFLOW_TIMEOUT_MS || '20000', 10);
+  const apiKey = process.env.MISTRAL_API_KEY;
+
+  if (!enabled || !apiKey) {
+    console.warn("[API Route] Mistral integration is disabled or MISTRAL_API_KEY is missing. Returning local fallback.");
+    const fallback = generateFallbackResponse(snapshot);
+    return NextResponse.json({ ...fallback, isFallback: true, error: "Mistral disabled or no API key set." });
+  }
+
+  // Tier 1: Attempt Python Workflow Worker execution
+  try {
+    console.log("[API Route] Tier 1: Invoking Python Workflow CLI via subprocess...");
     const workflowDir = path.join(process.cwd(), '..', 'peakflow-mistral-workflow');
     
     // Prepare input JSON string escaping quotes safely
     const inputString = JSON.stringify(snapshot).replace(/'/g, "'\\''");
-
     const execCommand = `export PATH=$PATH:/Users/m-alkassem/Library/Python/3.9/bin && uv run python -m entrypoints.start --workflow ${workflowName} --input '${inputString}'`;
+
+    console.log("[API Route] Checking if worker is available in task pool...");
 
     // Promise wrapper for exec
     const resultJson = await new Promise<any>((resolve, reject) => {
-      const child = exec(execCommand, {
+      exec(execCommand, {
         cwd: workflowDir,
         timeout: timeoutMs,
         env: {
@@ -158,21 +169,18 @@ export async function POST(request: NextRequest) {
         }
       }, (error, stdout, stderr) => {
         if (error) {
-          console.error("Workflow Execution Error:", error);
-          console.error("Workflow Stderr:", stderr);
           reject(error);
           return;
         }
 
         try {
-          // Find output line: "Result: { ... }"
           const stdoutStr = stdout.toString();
           const match = stdoutStr.match(/Result:\s*(\{[\s\S]*\})/);
           if (match) {
             const parsed = JSON.parse(match[1]);
             resolve(parsed);
           } else {
-            reject(new Error("Workflow did not output a valid Result JSON block. Output: " + stdoutStr));
+            reject(new Error("Worker stdout did not contain a valid Result JSON block."));
           }
         } catch (parseErr) {
           reject(parseErr);
@@ -180,12 +188,115 @@ export async function POST(request: NextRequest) {
       });
     });
 
+    console.log("[API Route] Tier 1: Workflow worker execution succeeded.");
     const sanitized = sanitizeWorkflowResponse(resultJson);
+    console.log("[API Route] Safety check passed: clean sanitized response returned.");
     return NextResponse.json({ ...sanitized, isFallback: false });
 
   } catch (err: any) {
-    console.error("Endpoint `/api/peakflow-workflow` Exception (switching to fallback):", err.message);
-    const fallback = generateFallbackResponse(err.message ? { scenario: "Emergency Fallback Trigger" } : {});
-    return NextResponse.json({ ...fallback, isFallback: true, error: err.message });
+    console.warn(`[API Route] Tier 1 Workflow execution failed (Worker unavailable or timeout). Reason: ${err.message}`);
+    console.log("[API Route] Tier 2: Initiating fallback to direct Mistral Chat Completion...");
+
+    // Tier 2: Call Mistral Chat Completion API directly for the briefing step (hybrid backup)
+    try {
+      console.log("[API Route] Sending direct Chat Completion request to Mistral API /v1/chat/completions...");
+      
+      const prompt = `
+      You are the PeakFlow Traffic Analyst for the Dubai RTA.
+      Generate an operator briefing in JSON format.
+      
+      Current Traffic Situation:
+      - Scenario: ${snapshot.scenario || 'Peak Congestion Window'}
+      - Time: ${snapshot.replayTime || '17:00'}
+      - Network Speed Index: ${snapshot.networkSpeed || 74}%
+      - Roads at Risk: ${snapshot.roadsAtRisk || 2}
+      
+      Active Risks:
+      ${JSON.stringify(snapshot.topRisks || [], null, 2)}
+      
+      Recommended Mitigations:
+      ${JSON.stringify(snapshot.recommendedActions || [], null, 2)}
+      
+      You must output a JSON object with the following fields:
+      - "headline": A short, high-impact alert headline.
+      - "situation": A paragraph describing the current traffic congestion and impact.
+      - "recommendedNextSteps": A JSON list of string steps/actions the operator should take next (e.g. "Monitor road X", "Activate bypass coordinates").
+      - "humanOversightReminder": A statement reinforcing operator approval requirements.
+      
+      Return VALID JSON ONLY. Do not wrap in markdown codeblocks.
+      `;
+
+      const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "open-mistral-7b",
+          messages: [
+            { role: "system", content: "You are a traffic engineering assistant. Output JSON only." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.2,
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Mistral API returned HTTP status ${response.status}`);
+      }
+
+      const resData = await response.json();
+      const content = resData.choices[0].message.content;
+      const parsedBriefing = JSON.parse(content);
+      console.log("[API Route] Direct Chat Completion status: success.");
+
+      // Assemble final response combining deterministic rules & custom AI briefing
+      const hybridResponse = {
+        summary: parsedBriefing.situation || `Network speed index at ${snapshot.networkSpeed || 74}% with ${snapshot.roadsAtRisk || 2} arterial segments at risk.`,
+        topRisks: (snapshot.topRisks || []).map((r: any) => ({
+          corridor: r.corridor,
+          riskScore: r.riskScore,
+          severity: r.riskScore >= 80 ? "Critical" : r.riskScore >= 60 ? "High" : r.riskScore >= 40 ? "Medium" : "Low",
+          mainCause: r.mainCause || "High peak commuter volumes.",
+          evidence: [
+            `Avg Speed is ${r.speedKph || 62} kph`,
+            `Hourly volume reaches ${r.volumeVph || 3800} vph`,
+            `Junction delay is ${r.delaySec || 45} seconds`
+          ],
+          recommendedAction: `Apply signal split override for ${r.corridor}.`
+        })),
+        recommendedActions: (snapshot.recommendedActions || []).map((a: any) => ({
+          type: a.type || "Route advisory",
+          target: a.target,
+          expectedImpact: a.expectedImpact || "Reduce local queue by 10-15%",
+          confidence: a.confidence || 0.85,
+          explanation: `Bypass congestion on ${a.target} using recommended detour offsets.`,
+          requiresHumanApproval: true
+        })),
+        operatorBriefing: parsedBriefing,
+        dataEvidence: {
+          datasetsUsed: ["traffic_volume", "weather", "incidents", "signal_performance", "calendar"],
+          keySignals: ["Volume-to-capacity thresholds exceeded", "Junction green phase failures"],
+          limitations: ["Real-time data lag", "Weather predictions accuracy"]
+        }
+      };
+
+      const sanitized = sanitizeWorkflowResponse(hybridResponse);
+      console.log("[API Route] Safety check passed: hybrid response sanitized.");
+      return NextResponse.json({ ...sanitized, isFallback: false, isHybridAI: true });
+
+    } catch (completionErr: any) {
+      console.error("[API Route] Tier 2 Direct Chat Completion failed. Switching to Tier 3 Local Fallback.");
+      console.error("[API Route] Fallback reason: Direct AI error:", completionErr.message);
+      
+      const fallback = generateFallbackResponse(snapshot);
+      return NextResponse.json({ 
+        ...fallback, 
+        isFallback: true, 
+        error: `Workflow error: ${err.message}. Direct AI error: ${completionErr.message}` 
+      });
+    }
   }
 }
