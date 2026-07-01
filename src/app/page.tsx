@@ -28,6 +28,7 @@ import { CorridorDetails } from './components/CorridorDetails';
 import { AiBriefingPanel } from './components/AiBriefingPanel';
 import { PreventionImpactSummary } from './components/PreventionImpactSummary';
 import { OperatorDecisionLog } from './components/OperatorDecisionLog';
+import { AiChatPanel } from './components/AiChatPanel';
 
 import { formatBriefField } from './lib/briefingFormatters';
 import { buildSafeSituationSummary } from './lib/risk';
@@ -705,6 +706,10 @@ export default function Page() {
                   <OperatorDecisionLog decisionLog={decisionLog} />
                 </div>
               </div>
+            )}
+
+            {activeTab === 'chat' && (
+              <AiChatPanel />
             )}
           </div>
         </section>

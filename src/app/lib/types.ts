@@ -99,4 +99,4 @@ export interface ApprovedImpact {
 }
 
 export type ThemeMode = 'dark' | 'light';
-export type ActiveTab = 'overview' | 'map' | 'forecast' | 'briefing';
+export type ActiveTab = 'overview' | 'map' | 'forecast' | 'briefing' | 'chat';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Compass, Cpu, Shield } from 'lucide-react';
+import { Sliders, Compass, Cpu, Shield, MessageSquare } from 'lucide-react';
 import { ActiveTab } from '../lib/types';
 
 interface DashboardTabsProps {
@@ -16,7 +16,7 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
   showToast
 }) => {
   const handleTabClick = (tab: ActiveTab) => {
-    if (tab === 'overview' || tab === 'map') {
+    if (tab === 'overview' || tab === 'map' || tab === 'chat') {
       setActiveTab(tab);
     } else {
       if (selectedLocationId) {
@@ -56,6 +56,12 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
         onClick={() => handleTabClick('briefing')}
       >
         <Shield size={16} /> AI Briefing
+      </button>
+      <button 
+        className={`main-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
+        onClick={() => handleTabClick('chat')}
+      >
+        <MessageSquare size={16} /> AI Copilot Chat
       </button>
     </div>
   );

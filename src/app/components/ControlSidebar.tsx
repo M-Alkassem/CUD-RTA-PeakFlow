@@ -8,7 +8,8 @@ import {
   Cpu, 
   AlertTriangle, 
   Activity, 
-  Shield 
+  Shield,
+  MessageSquare
 } from 'lucide-react';
 import { Scenario, ActiveTab } from '../lib/types';
 
@@ -42,7 +43,7 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
   showToast
 }) => {
   const handleTabClick = (label: string, tab: ActiveTab) => {
-    if (tab === 'overview' || tab === 'map') {
+    if (tab === 'overview' || tab === 'map' || tab === 'chat') {
       setActiveSidebarNav(label);
       setActiveTab(tab);
     } else {
@@ -65,7 +66,8 @@ export const ControlSidebar: React.FC<ControlSidebarProps> = ({
     { label: 'AI Predictions', tab: 'forecast', icon: <Cpu size={16} /> },
     { label: 'Incidents', tab: 'forecast', icon: <AlertTriangle size={16} /> },
     { label: 'Signal Timing', tab: 'forecast', icon: <Activity size={16} /> },
-    { label: 'AI Briefing', tab: 'briefing', icon: <Shield size={16} /> }
+    { label: 'AI Briefing', tab: 'briefing', icon: <Shield size={16} /> },
+    { label: 'AI Copilot Chat', tab: 'chat', icon: <MessageSquare size={16} /> }
   ];
 
   return (
