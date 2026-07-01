@@ -84,6 +84,63 @@ export const AiChatPanel: React.FC = () => {
     "Show average Salik toll logs and hourly volumes"
   ];
 
+  const parseInlineStyles = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, idx) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={idx} style={{ color: 'var(--text-title)', fontWeight: 700 }}>{part.substring(2, part.length - 2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  const renderFormattedText = (text: string) => {
+    const lines = text.split('\n');
+    return lines.map((line, lineIdx) => {
+      if (line.startsWith('### ')) {
+        return (
+          <h4 key={lineIdx} style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-title)', marginTop: '12px', marginBottom: '6px' }}>
+            {parseInlineStyles(line.substring(4))}
+          </h4>
+        );
+      }
+      if (line.startsWith('## ')) {
+        return (
+          <h3 key={lineIdx} style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-title)', marginTop: '14px', marginBottom: '8px' }}>
+            {parseInlineStyles(line.substring(3))}
+          </h3>
+        );
+      }
+      if (line.startsWith('# ')) {
+        return (
+          <h2 key={lineIdx} style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-title)', marginTop: '16px', marginBottom: '10px' }}>
+            {parseInlineStyles(line.substring(2))}
+          </h2>
+        );
+      }
+
+      if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
+        const cleanLine = line.trim().substring(2);
+        return (
+          <div key={lineIdx} style={{ display: 'flex', gap: '8px', paddingLeft: '8px', margin: '4px 0', fontSize: '14px', lineHeight: 1.5 }}>
+            <span style={{ color: 'var(--rta-blue)' }}>•</span>
+            <span style={{ flex: 1 }}>{parseInlineStyles(cleanLine)}</span>
+          </div>
+        );
+      }
+
+      if (!line.trim()) {
+        return <div key={lineIdx} style={{ height: '8px' }} />;
+      }
+
+      return (
+        <p key={lineIdx} style={{ margin: '4px 0', fontSize: '14.5px', lineHeight: 1.5 }}>
+          {parseInlineStyles(line)}
+        </p>
+      );
+    });
+  };
+
   return (
     <div 
       className="detail-card animate-fade-in" 
@@ -164,11 +221,10 @@ export const AiChatPanel: React.FC = () => {
                 padding: '12px 16px',
                 borderRadius: msg.sender === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                 fontSize: '14px',
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap'
+                lineHeight: 1.5
               }}
             >
-              {msg.text}
+              {renderFormattedText(msg.text)}
             </div>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', padding: '0 4px' }}>
               {msg.timestamp}
