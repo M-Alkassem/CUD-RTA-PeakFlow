@@ -31,6 +31,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
   const markerGroupRef = useRef<L.LayerGroup | null>(null);
   const polylinesRef = useRef<L.Polyline[]>([]);
+  const badgeMarkersRef = useRef<L.Marker[]>([]);
 
   const validHotspots = getValidDubaiHotspots(corridors);
 
@@ -185,43 +186,59 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     polylinesRef.current.forEach(p => p.remove());
     polylinesRef.current = [];
 
-    // Define coordinates paths
+    // Clear old badge markers
+    badgeMarkersRef.current.forEach(m => m.remove());
+    badgeMarkersRef.current = [];
+
+    // High-Fidelity Curved Coordinate Paths tracing real Dubai highways
     const paths = {
       SZR: [
-        [25.1178, 55.2012], // MOE
-        [25.1600, 55.2400], // Safa
+        [25.0750, 55.1380], // Marina / JLT
+        [25.0930, 55.1610], // Barsha Heights
+        [25.1180, 55.2000], // MOE / Interchange 4
+        [25.1430, 55.2220], // Al Manara
+        [25.1610, 55.2390], // Safa Park S
+        [25.1760, 55.2510], // Safa Park N
+        [25.2010, 55.2700], // Business Bay
         [25.2110, 55.2790], // DIFC
-        [25.2230, 55.2820]  // Defence
+        [25.2230, 55.2820]  // Defence / Interchange 1
       ],
       EKR: [
-        [25.1490, 55.2350], // Al Quoz
-        [25.1680, 55.2500],
-        [25.1860, 55.2700]  // Business Bay
+        [25.1250, 55.2200], // Al Quoz S
+        [25.1400, 55.2320],
+        [25.1490, 55.2350], // Al Quoz / Marabea
+        [25.1630, 55.2530], // Latifa Bint Hamdan
+        [25.1860, 55.2700], // Business Bay
+        [25.1960, 55.2880], // Financial Centre
+        [25.2190, 55.3130]  // Oud Metha E44
       ],
       JBR: [
-        [25.0800, 55.1400], // Marina
-        [25.1180, 55.1900],
-        [25.1500, 55.2200],
-        [25.2080, 55.2480]  // JBR
+        [25.1320, 55.1850], // Madinat Jumeirah
+        [25.1550, 55.2050], // Umm Suqeim
+        [25.1750, 55.2210], // Jumeirah 3
+        [25.2000, 55.2420], // Mercato
+        [25.2080, 55.2480], // Jumeirah 2
+        [25.2220, 55.2660]  // La Mer
       ],
       ITT: [
-        [25.2680, 55.3380], // Qiyadah
+        [25.2580, 55.3280], // Clocktower
+        [25.2680, 55.3380], // Qiyadah Metro
         [25.2950, 55.3550]  // Mamzar
       ],
       GAR: [
-        [25.2200, 55.3280],
-        [25.2330, 55.3300],
-        [25.2450, 55.3320]
+        [25.2200, 55.3230], // Oud Metha
+        [25.2330, 55.3300], // Creek bridge
+        [25.2450, 55.3380]  // Airport Rd merge
       ],
       MAK: [
-        [25.2300, 55.3150],
+        [25.2330, 55.3130],
         [25.2400, 55.3170],
-        [25.2500, 55.3200]
+        [25.2510, 55.3220]
       ],
       BBC: [
-        [25.1800, 55.2850],
-        [25.1920, 55.2900],
-        [25.2050, 55.2950]
+        [25.1780, 55.3150], // Ras Al Khor
+        [25.1920, 55.2900], // Creek bridge
+        [25.2050, 55.2850]  // Downtown bypass
       ]
     };
 
@@ -271,33 +288,46 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     if (selectedLocationId) {
       let altPath: L.LatLngExpression[] = [];
       let label = "";
+      let congestedBadgeCoords: [number, number] = [0, 0];
+      let alternateBadgeCoords: [number, number] = [0, 0];
+      let congestedBadgeText = "";
+      let alternateBadgeText = "";
 
       if (selectedLocationId.startsWith('SZR') && scores.SZR >= 40) {
         // Recommend Al Khail Road (EKR) as alternative bypass
         altPath = [
-          [25.1178, 55.2012], // SZR start
-          [25.1300, 55.2150], // bypass link
-          [25.1490, 55.2350], // EKR start
-          [25.1680, 55.2500],
+          [25.1180, 55.2000], // SZR MOE
+          [25.1220, 55.2100], // link road
+          [25.1250, 55.2200], // Al Quoz link
+          [25.1490, 55.2350], // EKR E44 path
+          [25.1630, 55.2530],
           [25.1860, 55.2700]  // EKR Business Bay
         ];
-        label = "AI Suggestion: Bypass SZR Congestion via Al Khail Rd (EKR)";
+        label = "AI Alternate Route: E44 Al Khail Road (Low Congestion)";
+        congestedBadgeCoords = [25.1610, 55.2390]; // Safa Park
+        congestedBadgeText = "SZR (E11): 45m (Delay +18m)";
+        alternateBadgeCoords = [25.1630, 55.2530]; // EKR middle
+        alternateBadgeText = "Al Khail (E44): 24m (Best Route)";
       } 
       else if (selectedLocationId === 'GAR_N1' && scores.GAR >= 40) {
         // Recommend Business Bay Crossing (BBC)
         altPath = [
-          [25.2100, 55.3350],
-          [25.2050, 55.2950], // BBC bypass Link
-          [25.1920, 55.2900], 
-          [25.1800, 55.2850]
+          [25.2200, 55.3230], // Oud Metha
+          [25.2050, 55.2950], // Link to BBC
+          [25.1920, 55.2900], // BBC bridge
+          [25.1780, 55.3150]  // Ras Al Khor
         ];
-        label = "AI Suggestion: Bypass Garhoud Bridge via Business Bay Crossing (BBC)";
+        label = "AI Alternate Route: Business Bay Crossing (Low Congestion)";
+        congestedBadgeCoords = [25.2330, 55.3300]; // Garhoud Bridge
+        congestedBadgeText = "Garhoud Br: 28m (Delay +12m)";
+        alternateBadgeCoords = [25.1920, 55.2900]; // BBC Bridge
+        alternateBadgeText = "BB Crossing: 16m (Best Route)";
       }
 
       if (altPath.length > 0) {
         const altPolyline = L.polyline(altPath, {
-          color: '#06b6d4', // Bright neon cyan/blue
-          weight: 4,
+          color: '#10b981', // Emerald Green for suggested route path
+          weight: 5,
           opacity: 0.9,
           dashArray: '8, 12',
           lineCap: 'round',
@@ -306,6 +336,33 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
 
         altPolyline.bindTooltip(label, { permanent: true, direction: 'top', className: 'ai-map-tooltip' });
         polylinesRef.current.push(altPolyline);
+
+        // Add Waze-style floating HTML badges at route centers
+        if (congestedBadgeCoords[0] > 0) {
+          const congestedHtml = `<div style="background: #ef4444; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${congestedBadgeText}</div>`;
+          const cMarker = L.marker(congestedBadgeCoords, {
+            icon: L.divIcon({
+              className: 'waze-congested-badge',
+              html: congestedHtml,
+              iconSize: [160, 30],
+              iconAnchor: [80, 15]
+            })
+          }).addTo(map);
+          badgeMarkersRef.current.push(cMarker);
+        }
+
+        if (alternateBadgeCoords[0] > 0) {
+          const alternateHtml = `<div style="background: #10b981; color: white; padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 11.5px; border: 2px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.4); white-space: nowrap; font-family: var(--font-display);">${alternateBadgeText}</div>`;
+          const aMarker = L.marker(alternateBadgeCoords, {
+            icon: L.divIcon({
+              className: 'waze-alternate-badge',
+              html: alternateHtml,
+              iconSize: [170, 30],
+              iconAnchor: [85, 15]
+            })
+          }).addTo(map);
+          badgeMarkersRef.current.push(aMarker);
+        }
       }
     }
   }, [corridors, selectedLocationId, viewMode]);
