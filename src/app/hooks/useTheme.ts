@@ -2,19 +2,14 @@ import { useState, useEffect } from 'react';
 import { ThemeMode } from '../lib/types';
 
 export function useTheme() {
-  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [theme, setTheme] = useState<ThemeMode>('light');
   const [realTime, setRealTime] = useState('');
 
   useEffect(() => {
     const root = window.document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    }
-  }, [theme]);
+    root.classList.add('light');
+    root.classList.remove('dark');
+  }, []);
 
   useEffect(() => {
     const updateTime = () => {
@@ -26,7 +21,7 @@ export function useTheme() {
     return () => clearInterval(timer);
   }, []);
 
-  const toggleTheme = () => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = () => {};
 
-  return { theme, setTheme, toggleTheme, realTime };
+  return { theme: 'light' as const, setTheme, toggleTheme, realTime };
 }

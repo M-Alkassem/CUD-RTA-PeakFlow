@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RTA PeakFlow Copilot
 
-## Getting Started
+**An AI copilot that helps Dubai RTA traffic operators prevent peak-hour congestion before it happens — by shifting demand instead of just reacting to gridlock.**
 
-First, run the development server:
+Built for the CUD 4IR Mobility Challenge.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## The real-world problem
+
+Dubai's business corridors (Sheikh Zayed Road → DIFC / Business Bay, the Creek crossings, key signalized junctions) regularly see demand exceed safe road capacity during the 08:00–09:00 AM and 17:00–19:00 PM peaks. Adding lanes is slow and expensive; reacting after congestion forms is too late. The most cost-effective lever is **demand shifting**: moving a calculated share of trips to earlier/later windows or to the Metro *before* the peak builds.
+
+## What the app does
+
+PeakFlow replays real hourly traffic, signal, Salik, weather, and Metro-ridership datasets and, for any corridor and hour:
+
+1. **Computes demand pressure deterministically** — demand vs. capacity, V/C ratio, excess trips over the 90%-capacity safe target ([demandShiftEngine.ts](src/app/lib/demandShiftEngine.ts)). The AI never invents numbers.
+2. **Recommends a campaign mix** to shift the excess demand: Employer Flex staggered hours (~60%), Metro/NOL incentives (~25%), off-peak parking rewards (~15%), plus RTA flow support as a secondary layer.
+3. **Generates an operator briefing with Mistral AI** — directly queries your published **Mistral Studio Agents** via server-side API routes to get plain-English briefings, employer/commuter messages, and strategy analysis.
+4. **Keeps a human in the loop** — every action requires operator approval; a safety filter strips any auto-control/dispatch language before anything reaches the screen; decisions are logged.
+
+## Architecture
+
+```
+Next.js Operator Dashboard (this repo)
+   │  POST /api/peakflow-workflow · /api/mistral/briefing
+   ▼
+Next.js API routes  ──► Mistral Studio Agents (cloud-hosted)
+                    ──► POST https://api.mistral.ai/v1/agents/completions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+All briefings and campaign analyses are live Mistral AI output from your cloud-hosted Mistral Studio Agents. If the Mistral API is unreachable or the keys are invalid, the UI shows an explicit error (with a retry button) — there is no canned fallback content. The deterministic numbers (demand, capacity, V/C, campaign mix) are always computed locally by the demand-shift engine; the AI only writes the narrative around them.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Getting started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev          # http://localhost:3000
+```
 
-## Learn More
+### Mistral AI setup (required)
 
-To learn more about Next.js, take a look at the following resources:
+1. Create an API key at [console.mistral.ai](https://console.mistral.ai) → API Keys. **Make sure your workspace has an active plan** (the free *Experiment* tier is enough) — keys return `401 Unauthorized` until a plan is activated.
+2. Put it in [.env](.env) as:
+   ```env
+   MISTRAL_API_KEY=your_key_here
+   MISTRAL_AGENT_ID_BRIEFING=your_briefing_agent_id_here
+   MISTRAL_AGENT_ID_WORKFLOW=your_workflow_agent_id_here
+   ```
+3. **Restart `npm run dev` after changing `.env`** — Next.js reads it at server start.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A valid key and agent configuration are required: AI panels show an error state until Mistral responds successfully.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Data
 
-## Deploy on Vercel
+`data/` contains the CUD RTA challenge datasets (hourly traffic volume, signal performance & timing plans, Salik tolls, Metro ridership, incidents, weather calendar, and location/junction references).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Demo script
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Pick a scenario in the left sidebar (Business Corridor Peak, Creek Crossing, Signal Performance, Storm Test).
+2. Select a corridor — the AI workflow runs automatically and fills the decision screen: demand vs. safe capacity, required shift, campaign mix, before/after commute.
+3. Switch the Time Window (or use *Auto: Highest Pressure Hour*).
+4. Open **Shift Briefing** for the full Mistral-generated operator briefing, then Approve / Request Review / Dismiss to demonstrate the human-in-the-loop decision log.

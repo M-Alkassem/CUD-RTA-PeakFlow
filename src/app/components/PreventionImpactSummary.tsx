@@ -26,7 +26,7 @@ export const PreventionImpactSummary: React.FC<PreventionImpactSummaryProps> = (
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '15px', color: 'var(--text-primary)' }}>
         <div>
-          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Before Risk Score:</span>{' '}
+          <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Before Demand Pressure:</span>{' '}
           <strong>{approvedImpact.beforeScore} / {approvedImpact.beforeLevel}</strong>
         </div>
         <div>

@@ -40,18 +40,22 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '10px' }}>
       
-      {/* Real Dubai Leaflet Map Component */}
-      <DubaiLeafletMap 
-        corridors={corridors}
-        selectedLocationId={selectedLocationId}
-        setSelectedLocationId={setSelectedLocationId}
-        theme={theme}
-        activeTab={activeTab}
-      />
+      {/* Real Dubai Leaflet Map Component.
+          Explicit height: the map sizes itself with height:100%, which needs
+          a definite ancestor height — this tab's column is auto-sized. */}
+      <div style={{ height: '560px' }}>
+        <DubaiLeafletMap
+          corridors={corridors}
+          selectedLocationId={selectedLocationId}
+          setSelectedLocationId={setSelectedLocationId}
+          theme={theme}
+          activeTab={activeTab}
+        />
+      </div>
 
       {/* Fallback & Tile Load Info Notice */}
       <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span>ℹ️ Map tiles are served via OpenStreetMap / CARTO. If offline or tiles fail to load, hotspot risk scores remain inspectable in the Overview table.</span>
+        <span>ℹ️ Map tiles are served via OpenStreetMap / CARTO. If offline or tiles fail to load, demand pressure data remains inspectable in the Demand Pressure tab.</span>
       </div>
 
       {/* Bottom Panel - Legend & Selected Hotspot Detail Card */}
@@ -95,9 +99,9 @@ export const LiveMapTab: React.FC<LiveMapTabProps> = ({
                 )}
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontSize: '14px', marginTop: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', fontSize: '14px', marginTop: '6px' }}>
                 <div>
-                  <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '12px' }}>Risk Score</span>
+                  <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '12px' }}>Demand V/C</span>
                   <strong style={{ fontSize: '16px', color: selectedCorridor.congestion_pressure_score >= 80 ? 'var(--color-critical)' : selectedCorridor.congestion_pressure_score >= 60 ? 'var(--color-high)' : selectedCorridor.congestion_pressure_score >= 40 ? 'var(--color-medium)' : 'var(--color-low)' }}>
                     {selectedCorridor.congestion_pressure_score} / 100
                   </strong>

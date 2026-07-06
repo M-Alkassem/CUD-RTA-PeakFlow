@@ -8,7 +8,7 @@ export function useTrafficData(
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [activeScenarioId, setActiveScenarioId] = useState('pm-peak-demo');
   const [date, setDate] = useState('2024-10-16');
-  const [hour, setHour] = useState(16);
+  const [hour, setHour] = useState(8);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(4); // seconds per simulated hour
 

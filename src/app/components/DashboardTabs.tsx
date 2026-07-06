@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sliders, Compass, Cpu, Shield, MessageSquare } from 'lucide-react';
+import { Sliders, Compass, Cpu, Shield } from 'lucide-react';
 import { ActiveTab } from '../lib/types';
 
 interface DashboardTabsProps {
@@ -16,16 +16,16 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
   showToast
 }) => {
   const handleTabClick = (tab: ActiveTab) => {
-    if (tab === 'overview' || tab === 'map' || tab === 'chat') {
+    if (tab === 'overview' || tab === 'map') {
       setActiveTab(tab);
     } else {
       if (selectedLocationId) {
         setActiveTab(tab);
       } else {
         if (showToast) {
-          showToast("Please select a hotspot corridor first.", "warning");
+          showToast("Please select a corridor first.", "warning");
         } else {
-          alert("Please select a hotspot corridor first.");
+          alert("Please select a corridor first.");
         }
       }
     }
@@ -37,7 +37,7 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
         className={`main-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
         onClick={() => handleTabClick('overview')}
       >
-        <Sliders size={16} /> Overview
+        <Sliders size={16} /> Demand Pressure
       </button>
       <button 
         className={`main-tab-btn ${activeTab === 'map' ? 'active' : ''}`}
@@ -49,19 +49,13 @@ export const DashboardTabs: React.FC<DashboardTabsProps> = ({
         className={`main-tab-btn ${activeTab === 'forecast' ? 'active' : ''}`}
         onClick={() => handleTabClick('forecast')}
       >
-        <Cpu size={16} /> Forecast & Actions
+        <Cpu size={16} /> Demand Campaign Planner
       </button>
       <button 
         className={`main-tab-btn ${activeTab === 'briefing' ? 'active' : ''}`}
         onClick={() => handleTabClick('briefing')}
       >
-        <Shield size={16} /> AI Briefing
-      </button>
-      <button 
-        className={`main-tab-btn ${activeTab === 'chat' ? 'active' : ''}`}
-        onClick={() => handleTabClick('chat')}
-      >
-        <MessageSquare size={16} /> AI Copilot Chat
+        <Shield size={16} /> Shift Briefing
       </button>
     </div>
   );

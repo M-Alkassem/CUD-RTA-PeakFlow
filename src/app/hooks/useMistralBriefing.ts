@@ -6,7 +6,14 @@ export function useMistralBriefing(params: {
   date: string;
   hour: number;
   calendarContext: any;
-  selectedRecommendation: { action: string; reason: string };
+  selectedRecommendation: {
+    action: string;
+    congestionReducingAction: string;
+    expectedImpact: string;
+    doNothingRisk: string;
+    dataEvidence: string;
+    operatorApprovalRequired: string;
+  };
 }) {
   const { selectedCorridor, date, hour, calendarContext, selectedRecommendation } = params;
   const [briefing, setBriefing] = useState<any>(null);
@@ -38,7 +45,7 @@ export function useMistralBriefing(params: {
       causesArray.push('volume near capacity');
     }
     if (causesArray.length === 0) {
-      causesArray.push('PM Peak Commute');
+      causesArray.push('AM Peak Commute');
     }
 
     const payload = {
@@ -57,7 +64,13 @@ export function useMistralBriefing(params: {
       activeIncidents: selectedCorridor.active_incidents,
       calendarContext,
       junctionPerformance: selectedCorridor.junction_performance,
-      recommended_action: selectedRecommendation.action,
+      recommended_action: selectedRecommendation.congestionReducingAction || selectedRecommendation.action,
+      doNothingRisk: selectedRecommendation.doNothingRisk,
+      congestionReducingAction: selectedRecommendation.congestionReducingAction,
+      expectedImpact: selectedRecommendation.expectedImpact,
+      dataEvidence: selectedRecommendation.dataEvidence,
+      operatorApprovalRequired: selectedRecommendation.operatorApprovalRequired,
+      actionType: selectedRecommendation.action,
       causes: causesArray
     };
 
@@ -68,9 +81,14 @@ export function useMistralBriefing(params: {
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      setBriefing(data);
-    } catch (err) {
+      if (!res.ok || data.error) {
+        setBriefing({ error: data.error || `Briefing request failed with status ${res.status}` });
+      } else {
+        setBriefing(data);
+      }
+    } catch (err: any) {
       console.error('Error generating brief', err);
+      setBriefing({ error: err.message || 'Failed to reach the briefing API.' });
     } finally {
       setIsGeneratingBrief(false);
     }

@@ -4,17 +4,17 @@ export async function GET() {
   const scenarios = [
     {
       id: 'pm-peak-demo',
-      title: 'PM Peak Congestion Demo',
-      description: 'Normal weekday commuter PM Peak rush hour on Sheikh Zayed Road southbound. Traffic builds up starting at 16:00, peaks at 17:00-19:00, and dissipates by 20:00.',
+      title: 'Business Corridor Peak Demo',
+      description: 'AM peak commute window on Sheikh Zayed Road toward DIFC / Business Bay. Demand builds from 07:00, peaks at 08:00–09:00, and eases by 10:00.',
       date: '2024-10-16',
-      startHour: 16,
-      endHour: 20,
-      focusLocation: 'SZR_S1',
+      startHour: 8,
+      endHour: 10,
+      focusLocation: 'SZR_N1',
       focusJunction: 'JCT_DEF',
       focusRoad: 'Sheikh Zayed Road',
-      focusDirection: 'SB (to Abu Dhabi)',
-      story: 'Evaluate normal commuter peaks and signal timing splits at Defence Junction during rush hour.',
-      focusIds: ['SZR_S1', 'SZR_S2', 'SZR_S4', 'ITT_E1', 'ITT_W1']
+      focusDirection: 'NB (to Deira)',
+      story: 'Evaluate AM peak demand pressure on the SZR → DIFC / Business Bay corridor and recommend demand shift campaigns.',
+      focusIds: ['SZR_S1', 'SZR_S2', 'SZR_N1', 'SZR_N2', 'EKR_N1']
     },
     {
       id: 'creek-crossing-demo',

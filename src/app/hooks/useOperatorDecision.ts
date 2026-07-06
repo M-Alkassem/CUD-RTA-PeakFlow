@@ -31,8 +31,8 @@ export function useOperatorDecision(params: {
       'metro-riders': 'Public Transport Advisory',
       'salik-shift': 'Off-Peak Demand Shift',
       'incident-response': 'Incident Response',
-      'monitor': 'Monitor Only'
-    }[activeMitigationKey] || 'Monitor Only';
+      'monitor': 'Baseline Monitoring'
+    }[activeMitigationKey] || 'Baseline Monitoring';
 
     if (action === 'approve') {
       desc = `Operator approved recommendation: ${mitigationText}`;

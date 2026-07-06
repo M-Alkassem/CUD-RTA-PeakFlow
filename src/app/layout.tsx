@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 const inter = Inter({
@@ -9,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RTA PeakFlow Copilot — Traffic Prevention Dashboard",
-  description: "Decision support console for predictive traffic management, signal overrides, and public advisories in Dubai.",
+  title: "RTA PeakFlow — Demand Shift & Flow Support Engine",
+  description: "AI engine that calculates peak-hour demand pressure and recommends employer campaigns, Metro incentives, and parking rewards to flatten congestion.",
 };
 
 export default function RootLayout({

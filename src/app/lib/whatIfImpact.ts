@@ -171,8 +171,8 @@ export const calculateWhatIfImpact = (params: {
     'metro-riders': 'Public Transport Advisory',
     'salik-shift': 'Off-Peak Demand Shift',
     'incident-response': 'Incident Response',
-    'monitor': 'Monitor Only'
-  }[selectedAction] || 'Monitor Only';
+    'monitor': 'Baseline Monitoring'
+  }[selectedAction] || 'Baseline Monitoring';
 
   return {
     actionName,

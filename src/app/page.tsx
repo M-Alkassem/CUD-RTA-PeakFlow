@@ -19,7 +19,7 @@ import { useWhatIfSimulator } from './hooks/useWhatIfSimulator';
 import { useMistralBriefing } from './hooks/useMistralBriefing';
 import { useOperatorDecision } from './hooks/useOperatorDecision';
 
-import { ControlSidebar } from './components/ControlSidebar';
+// import { ControlSidebar } from './components/ControlSidebar';
 import { DashboardTabs } from './components/DashboardTabs';
 import { KpiCards } from './components/KpiCards';
 import { TrafficRiskTable } from './components/TrafficRiskTable';
@@ -28,18 +28,23 @@ import { CorridorDetails } from './components/CorridorDetails';
 import { AiBriefingPanel } from './components/AiBriefingPanel';
 import { PreventionImpactSummary } from './components/PreventionImpactSummary';
 import { OperatorDecisionLog } from './components/OperatorDecisionLog';
-import { AiChatPanel } from './components/AiChatPanel';
+import { DemandShiftHero } from './components/DemandShiftHero';
+import { DemandShiftDecisionScreen } from './components/DemandShiftDecisionScreen';
+import { DemandCampaignPlanner } from './components/DemandCampaignPlanner';
 
 import { formatBriefField } from './lib/briefingFormatters';
 import { buildSafeSituationSummary } from './lib/risk';
 import { ActiveTab } from './lib/types';
+import { getDemandShiftRecommendation } from './lib/demandShiftEngine';
 
 export default function Page() {
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>('SZR_S1');
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>('SZR_N1');
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
-  const [activeSidebarNav, setActiveSidebarNav] = useState('Dashboard');
+  const [activeSidebarNav, setActiveSidebarNav] = useState('Demand Pressure');
   const [showTooltip, setShowTooltip] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null);
+  const [viewMode, setViewMode] = useState<'demo' | 'planner'>('demo');
+  const [timeSelectionMode, setTimeSelectionMode] = useState<'manual' | 'auto'>('manual');
 
   const showToast = useCallback((message: string, type: 'success' | 'info' | 'warning' = 'info') => {
     setToast({ message, type });
@@ -54,14 +59,14 @@ export default function Page() {
 
   useEffect(() => {
     if (activeTab === 'overview') {
-      setActiveSidebarNav('Dashboard');
+      setActiveSidebarNav('Demand Pressure');
     } else if (activeTab === 'map') {
       setActiveSidebarNav('Live Map');
     } else if (activeTab === 'briefing') {
-      setActiveSidebarNav('AI Briefing');
+      setActiveSidebarNav('Shift Briefing');
     } else if (activeTab === 'forecast') {
-      if (!['AI Predictions', 'Incidents', 'Signal Timing'].includes(activeSidebarNav)) {
-        setActiveSidebarNav('AI Predictions');
+      if (!['Demand Campaign Planner', 'Incidents', 'Signal Timing'].includes(activeSidebarNav)) {
+        setActiveSidebarNav('Demand Campaign Planner');
       }
     }
   }, [activeTab]);
@@ -91,78 +96,144 @@ export default function Page() {
   const junctionPerformance = selectedCorridor?.junction_performance;
 
   const getRecommendedActionForCorridor = (cor: any) => {
-    if (!cor) return { action: 'Monitor conditions', reason: 'Normal flow detected.' };
+    if (!cor) {
+      return {
+        action: 'Low Risk — No Intervention Needed',
+        congestionReducingAction: 'No intervention needed. Corridor conditions are within safe limits.',
+        expectedImpact: 'Traffic remains normal and free-flowing.',
+        doNothingRisk: 'No immediate congestion risk expected.',
+        dataEvidence: 'All speed and volume readings are normal.',
+        operatorApprovalRequired: 'No operator action required.',
+        reason: 'Monitor corridor conditions. No intervention needed.',
+        beforeScore: 0,
+        afterScore: 0
+      };
+    }
 
     const isStorm = date === '2024-04-16';
     const hasIncident = cor.incident_affected;
-    const hasSignalSaturation = cor.junction_performance?.degree_of_saturation > 0.9;
-    const isFixedSignal = cor.junction_performance?.control_type === 'Fixed-time';
+    const junction = cor.junction_performance;
+    const dos = junction?.degree_of_saturation || 0;
+    const delay = junction?.avg_delay_s_per_veh || 0;
+    const queue = junction?.avg_queue_veh || 0;
+    const pf = junction?.phase_failures || 0;
+    const score = cor.congestion_pressure_score;
+    const vc = cor.vc_ratio || 0;
 
-    if (isStorm) {
-      return {
-        action: 'Official roadside advisory + incident response',
-        reason: 'Severe rain and flooding event. Coordinate active emergency responses to flooded exits and advise public transport shift.'
-      };
-    }
+    // A. Full demand shift campaign:
+    // Storm, flooding, major disruption, or extreme peak pressure (score >= 80)
+    const matchFullCampaign = isStorm || score >= 80 || activeScenarioId === 'stress-test-demo';
 
-    if (activeScenarioId === 'creek-crossing-demo' && cor.location_id === 'GAR_N1') {
-      const mak = corridors.find(c => c.location_id === 'MAK_N1');
-      const bbc = corridors.find(c => c.location_id === 'BBC_S1');
-      const makRisk = mak ? mak.congestion_pressure_score : 100;
-      const bbcRisk = bbc ? bbc.congestion_pressure_score : 100;
-      
-      if (cor.congestion_pressure_score > makRisk || cor.congestion_pressure_score > bbcRisk) {
-        const targetCrossing = bbcRisk <= makRisk ? 'Business Bay Crossing' : 'Al Maktoum Bridge';
-        return {
-          action: `Route advisory to ${targetCrossing}`,
-          reason: `Al Garhoud Bridge is congested (${cor.congestion_pressure_score}/100). Divert outbound flow to the lower-risk crossing: ${targetCrossing}.`
-        };
+    // B. Incident flow support:
+    // Incident exists, lanes blocked
+    const matchIncident = hasIncident;
+
+    // C. Junction congestion amplification:
+    // degree_of_saturation is high, delay is high, queue is high, phase failures exist
+    const matchJunction = junction && (dos >= 0.70 || delay >= 20 || queue >= 2 || pf > 0);
+
+    // D. Standard demand pressure:
+    // Corridor pressure is above normal
+    const matchDemandPressure = score >= 40 || activeScenarioId === 'creek-crossing-demo';
+
+    // Build the dynamic, scenario-specific evidence
+    const buildEvidence = () => {
+      if (date === '2024-04-16') {
+        return `Weather telemetry shows active rain and flooding. Roadway visibility is low, triggering multiple incidents. Metro daily ridership shows a significant shift (+18%).`;
       }
-    }
-
-    if (hasIncident) {
-      if (hasSignalSaturation) {
-        return {
-          action: 'Signal timing review',
-          reason: 'Active collision causing approach delays and signal saturation. Modify green timings at adjacent Defence intersection.'
-        };
+      if (activeScenarioId === 'creek-crossing-demo') {
+        const altText = cor.location_id === 'GAR_N1' ? "Metro/park-and-ride available. Al Maktoum Bridge lower load." : "Alternate crossings available with lower demand.";
+        return `Al Garhoud Bridge demand at ${score}% of safe capacity. ${altText}`;
       }
-      return {
-        action: 'Incident response + route advisory',
-        reason: 'Incident lanes blocked. Coordinate emergency road patrol response and publish dynamic route rerouting via official roadside signs.'
-      };
-    }
+      if (activeScenarioId === 'signal-delay-demo' || matchJunction) {
+        return `Junction ${junction?.junction_id || 'JCT_DEIRA'} degree of saturation is ${(dos * 100).toFixed(0)}%, average delay is ${delay.toFixed(1)}s per vehicle, and queue count reaches ${queue.toFixed(0)} vehicles. Phase failures are active (${pf} detected) under ${junction?.control_type || 'fixed-time'} control.`;
+      }
+      // AM Peak default
+      return `AM peak commute pressure at ${cor.volume_vph} vph. Speed dropped to ${cor.avg_speed_kph} kph (limit: ${cor.speed_limit_kph} kph). V/C ratio: ${vc.toFixed(2)}, travel time index: ${cor.travel_time_index.toFixed(2)}x.`;
+    };
 
-    if (hasSignalSaturation || (isFixedSignal && cor.congestion_pressure_score >= 65)) {
-      return {
-        action: 'Signal timing review',
-        reason: 'Intersection approach saturated. Revise static plans and add green timing splits to clear approach bottlenecks.'
-      };
-    }
+    const evidenceText = buildEvidence();
 
-    if (cor.vc_ratio > 0.9) {
+    if (matchFullCampaign) {
+      const after = Math.max(15, Math.round(score * 0.85));
       return {
-        action: 'Route advisory',
-        reason: 'Corridor demand exceeds 90% of structural capacity. Reroute outbound flow to adjacent expressways.'
+        action: 'Employer Flex + Metro/NOL + Parking Reward Campaign',
+        congestionReducingAction: 'Launch employer flex timing, Metro/NOL incentive, and off-peak parking reward to shift demand out of the worst peak window.',
+        expectedImpact: `Estimated to shift 8–12% of peak demand to off-peak windows and Metro, reducing commute time by 15–20 minutes.`,
+        doNothingRisk: 'Demand will exceed safe capacity, causing severe delays and gridlock.',
+        dataEvidence: evidenceText,
+        operatorApprovalRequired: 'RTA operator approval required to launch campaign.',
+        reason: 'Employer flex campaign with Metro and parking incentives.',
+        beforeScore: score,
+        afterScore: after
       };
-    }
-
-    if (cor.congestion_pressure_score >= 60 && hour >= 17 && hour <= 19) {
+    } else if (matchIncident) {
+      const after = Math.max(15, Math.round(score * 0.75));
       return {
-        action: 'Public transport advisory',
-        reason: 'Saturated PM outbound commuter flow. Advise public transport modal shift via official pre-trip mobility updates.'
+        action: 'Incident Flow Support + Metro Shift Incentive',
+        congestionReducingAction: 'Coordinate flow support for blocked lanes and incentivize Metro shift during clearance.',
+        expectedImpact: `Expected to restore flow within 30 minutes and shift 5–8% of demand to Metro during incident clearance.`,
+        doNothingRisk: 'Blocked lanes will cause queues to extend by over 1.5 km and double delay.',
+        dataEvidence: evidenceText,
+        operatorApprovalRequired: 'RTA operator approval required to coordinate flow support.',
+        reason: 'Coordinate flow support and Metro shift incentive.',
+        beforeScore: score,
+        afterScore: after
+      };
+    } else if (matchJunction) {
+      const after = Math.max(15, Math.round(score * 0.8));
+      return {
+        action: 'Employer Flex + RTA Flow Support',
+        congestionReducingAction: 'Launch employer flex campaign for staggered arrivals and review junction flow support.',
+        expectedImpact: `Estimated to reduce junction queue buildup by 10–15% and shift 5–8% of demand to off-peak.`,
+        doNothingRisk: 'Junction queues will spill back and amplify demand backup on the corridor.',
+        dataEvidence: evidenceText,
+        operatorApprovalRequired: 'RTA operator approval required to launch campaign and review flow support.',
+        reason: 'Employer flex campaign with junction flow support.',
+        beforeScore: score,
+        afterScore: after
+      };
+    } else if (matchDemandPressure) {
+      const after = Math.max(15, Math.round(score * 0.8));
+      return {
+        action: 'Metro/NOL Incentive + Parking Reward',
+        congestionReducingAction: 'Incentivize Metro/park-and-ride shift with NOL rewards and off-peak parking discount.',
+        expectedImpact: `Estimated to shift 3–5% of demand to Metro and flatten peak by 8–12%.`,
+        doNothingRisk: 'Corridor pressure continues to build above safe capacity.',
+        dataEvidence: evidenceText,
+        operatorApprovalRequired: 'RTA operator approval required to activate incentive campaigns.',
+        reason: 'Metro/NOL incentive with parking reward.',
+        beforeScore: score,
+        afterScore: after
       };
     }
 
     return {
-      action: 'Monitor conditions',
-      reason: 'Traffic parameters remain within normal design thresholds.'
+      action: 'No Shift Needed — Within Operating Target',
+      congestionReducingAction: 'Demand is within operating target capacity. No campaign needed.',
+      expectedImpact: 'Traffic remains within acceptable levels.',
+      doNothingRisk: 'No immediate demand pressure expected.',
+      dataEvidence: evidenceText,
+      operatorApprovalRequired: 'No operator action required.',
+      reason: 'Demand within safe limits.',
+      beforeScore: score,
+      afterScore: score
     };
   };
 
   const selectedRecommendation = selectedCorridor 
     ? getRecommendedActionForCorridor(selectedCorridor) 
-    : { action: 'Monitor conditions', reason: 'Normal flow detected.' };
+    : {
+        action: 'Low Risk — No Intervention Needed',
+        congestionReducingAction: 'No intervention needed. Corridor conditions are within safe limits.',
+        expectedImpact: 'Traffic remains normal and free-flowing.',
+        doNothingRisk: 'No immediate congestion risk expected.',
+        dataEvidence: 'All parameters normal.',
+        operatorApprovalRequired: 'No operator action required.',
+        reason: 'Monitor corridor conditions. No intervention needed.',
+        beforeScore: 0,
+        afterScore: 0
+      };
 
   const {
     mitigations,
@@ -189,6 +260,7 @@ export default function Page() {
 
   const {
     briefing,
+    setBriefing,
     isGeneratingBrief,
     handleGenerateBriefing
   } = useMistralBriefing({
@@ -201,7 +273,9 @@ export default function Page() {
 
   const {
     decisionLog,
+    setDecisionLog,
     approvedImpact,
+    setApprovedImpact,
     handleOperatorDecision
   } = useOperatorDecision({
     selectedCorridor,
@@ -216,28 +290,41 @@ export default function Page() {
 
   const [workflowResponse, setWorkflowResponse] = React.useState<any>(null);
   const [isWorkflowLoading, setIsWorkflowLoading] = React.useState<boolean>(false);
+  const [workflowError, setWorkflowError] = React.useState<string | null>(null);
 
   const handleTriggerWorkflow = async () => {
     if (!selectedCorridor) return;
     setIsWorkflowLoading(true);
     setWorkflowResponse(null);
+    setWorkflowError(null);
 
-    const snapshotRisks = sortedCorridors.slice(0, 3).map(c => ({
-      corridor: c.location_name,
-      riskScore: c.congestion_pressure_score,
-      speedKph: c.avg_speed_kph,
-      volumeVph: c.demand_vph,
-      delaySec: c.junction_performance?.avg_delay_s_per_veh || 0,
-      mainCause: getRecommendedActionForCorridor(c).reason
-    }));
+    const snapshotRisks = sortedCorridors.slice(0, 3).map(c => {
+      const rec = getRecommendedActionForCorridor(c);
+      return {
+        corridor: c.location_name,
+        riskScore: c.congestion_pressure_score,
+        speedKph: c.avg_speed_kph,
+        volumeVph: c.demand_vph,
+        delaySec: c.junction_performance?.avg_delay_s_per_veh || 0,
+        mainCause: c.incident_affected ? 'Active lane-blocking traffic collision' : 'Peak commuter rush hour volume',
+        doNothingRisk: rec.doNothingRisk,
+        congestionReducingAction: rec.congestionReducingAction,
+        expectedImpact: rec.expectedImpact,
+        dataEvidence: rec.dataEvidence,
+        operatorApprovalRequired: rec.operatorApprovalRequired,
+        actionType: rec.action
+      };
+    });
 
     const snapshotActions = sortedCorridors.slice(0, 3).filter(c => c.congestion_pressure_score >= 40).map(c => {
       const rec = getRecommendedActionForCorridor(c);
       return {
-        type: rec.action.includes('Signal') ? 'Signal timing review' : rec.action.includes('Route') ? 'Route advisory' : 'Operator alert',
+        type: rec.action,
         target: c.location_name,
-        expectedImpact: 'Reduce local queue spillback by 15-20%',
-        confidence: 0.88
+        expectedImpact: rec.expectedImpact,
+        confidence: 0.88,
+        explanation: rec.congestionReducingAction,
+        requiresHumanApproval: true
       };
     });
 
@@ -246,9 +333,16 @@ export default function Page() {
         type: 'Operator alert',
         target: 'All sectors',
         expectedImpact: 'Maintain current green timings',
-        confidence: 0.95
+        confidence: 0.95,
+        explanation: 'Monitor conditions only. No dynamic prevention overrides active.',
+        requiresHumanApproval: true
       });
     }
+
+    const shiftRec = getDemandShiftRecommendation(selectedCorridor, activeScenarioId || '', date, hour);
+    const pressure = shiftRec.demandPressure;
+    const mixByType: Record<string, number> = {};
+    shiftRec.campaignMix.strategies.forEach(s => { mixByType[s.type] = s.tripsToShift; });
 
     const payload = {
       scenario: currentScenario?.title || 'Peak Congestion Window',
@@ -256,7 +350,31 @@ export default function Page() {
       networkSpeed: kpis.avgSpeed || 74,
       roadsAtRisk: kpis.highRiskRoads || 0,
       topRisks: snapshotRisks,
-      recommendedActions: snapshotActions
+      recommendedActions: snapshotActions,
+      date,
+      hour,
+      locationId: selectedLocationId,
+      viewMode,
+      selectedCorridor: {
+        corridorName: selectedCorridor.location_name || `${selectedCorridor.road_name} (${selectedCorridor.direction})`,
+        roadName: selectedCorridor.road_name,
+        area: selectedCorridor.area || 'business district',
+        hour: `${String(hour).padStart(2, '0')}:00`,
+        demand: pressure.currentDemand,
+        capacity: pressure.capacity,
+        safeTarget: pressure.safeTarget,
+        excessDemand: pressure.excess,
+        requiredShiftPct: pressure.excessPct,
+        currentVC: Math.round(pressure.vcRatio * 100) / 100,
+        afterVC: shiftRec.beforeAfter.after.vc,
+        currentCommuteEstimate: shiftRec.commuteEstimate.currentMin,
+        estimatedSaving: shiftRec.beforeAfter.minutesSaved,
+        campaignMixValues: {
+          employerFlex: mixByType['employer-flex'] || 0,
+          metroNol: mixByType['metro-nol'] || 0,
+          parkingReward: mixByType['parking-reward'] || 0
+        }
+      }
     };
 
     try {
@@ -265,20 +383,49 @@ export default function Page() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Workflow request failed with status code ${res.status}`);
+      }
       const data = await res.json();
       setWorkflowResponse(data);
-      if (data.isFallback) {
-        showToast("Mistral Workflow is offline or unverified. Displaying fallback briefing.", "warning");
-      } else {
-        showToast("PeakFlow Congestion Prevention Workflow ran successfully!", "success");
-      }
+      showToast("PeakFlow Demand Shift Workflow ran successfully!", "success");
     } catch (err: any) {
       console.error("Error triggering peakflow workflow:", err);
-      showToast("Error executing workflow. Running local fallback briefing.", "warning");
+      setWorkflowError(err.message || "Mistral AI Workflow failed.");
+      setWorkflowResponse(null);
+      showToast(err.message || "Error executing workflow.", "warning");
     } finally {
       setIsWorkflowLoading(false);
     }
   };
+
+  React.useEffect(() => {
+    if (timeSelectionMode === 'auto' && selectedCorridor && selectedCorridor.volumeHistory) {
+      const candidateHours = [7, 8, 9, 17, 18, 19];
+      let maxVol = -1;
+      let peakH = 8;
+      candidateHours.forEach(h => {
+        const vol = selectedCorridor.volumeHistory[h] || 0;
+        if (vol > maxVol) {
+          maxVol = vol;
+          peakH = h;
+        }
+      });
+      if (hour !== peakH) {
+        setHour(peakH);
+      }
+    }
+  }, [timeSelectionMode, selectedLocationId, selectedCorridor, hour, setHour]);
+
+  // Re-run the AI workflow only when the selected corridor's *data* is in —
+  // depending on hour alone would fire with stale corridor values while the
+  // new hour's traffic snapshot is still being fetched.
+  React.useEffect(() => {
+    setWorkflowResponse(null);
+    setWorkflowError(null);
+    setBriefing(null);
+  }, [selectedLocationId, hour]);
 
   const triggerDecision = (action: 'approve' | 'reject' | 'review') => {
     handleOperatorDecision(action, setAppliedActions);
@@ -288,88 +435,165 @@ export default function Page() {
       } else if (action === 'reject') {
         showToast(`Recommendation dismissed for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`, 'info');
       } else if (action === 'approve') {
-        showToast(`Action Approved: Mitigations applied for ${selectedCorridor.road_name} (${selectedCorridor.direction}).`, 'success');
+        showToast(`Campaign draft approved for review on ${selectedCorridor.road_name}. Message packages prepared.`, 'success');
       }
     }
   };
 
-  // Build the What-If Options mapped to their impact variables
-  const simulatorOptions = [
-    {
-      key: 'route-advisory',
-      title: 'Route Advisory',
-      desc: 'Diverts incoming volume to alternative bridges using official roadside signs.',
-      impact: routeImpact,
-      icon: <Compass size={15} />
-    },
-    {
-      key: 'signal-timing',
-      title: 'Signal Timing Review',
-      desc: 'Alters green timing split profiles at Defence intersection approaches.',
-      impact: signalImpact,
-      icon: <Sliders size={15} />
-    },
-    {
-      key: 'metro-riders',
-      title: 'Public Transport Advisory',
-      desc: 'Publishes app alerts advising metro ridership shifts to clear roadway volume.',
-      impact: metroImpact,
-      icon: <Train size={15} />
-    },
-    {
-      key: 'salik-shift',
-      title: 'Off-Peak Demand Shift',
-      desc: 'Advertises dynamic pricing shifts to redirect non-essential commute timings.',
-      impact: salikImpact,
-      icon: <Sliders size={15} />
-    },
-    {
-      key: 'incident-response',
-      title: 'Incident Response',
-      desc: 'Coordinates RTA emergency patrol response to clear blocked lanes.',
-      impact: incidentImpact,
-      icon: <Zap size={15} />
-    },
-    {
-      key: 'monitor',
-      title: 'Monitor Only',
-      desc: 'No dynamic prevention overrides active; conditions continue to be monitored.',
-      impact: null,
-      icon: <Activity size={15} />
+  const triggerCustomDecision = (logText: string) => {
+    const logEntry = {
+      timestamp: new Date().toLocaleTimeString(),
+      location: selectedLocationId || 'SZR_N1',
+      description: logText,
+      status: 'APPROVED',
+      operator: 'OP-402'
+    };
+    setDecisionLog(prev => [logEntry, ...prev]);
+    if (selectedCorridor) {
+      setApprovedImpact({
+        beforeScore: selectedCorridor.congestion_pressure_score,
+        beforeLevel: selectedCorridor.risk_level,
+        approvedAction: 'Custom Demand Campaign',
+        expectedImpact: 'Custom campaign intensity applied to corridor.',
+        mainReason: 'Operator customized campaign mix.',
+        status: 'APPROVED'
+      });
     }
-  ];
+  };
+
+
+
 
   return (
     <div className="app-container">
-      <main className="dashboard-grid" style={{ height: '100vh', display: 'grid', gridTemplateColumns: '280px 1fr' }}>
-        {/* Left Sidebar only for scenario selection */}
-        <ControlSidebar 
-          scenarios={scenarios} 
-          activeScenarioId={activeScenarioId} 
-          handleLaunchScenario={handleLaunchScenario} 
-          realTime={realTime}
-          theme={theme}
-          toggleTheme={toggleTheme}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          selectedLocationId={selectedLocationId}
-          activeSidebarNav={activeSidebarNav}
-          setActiveSidebarNav={setActiveSidebarNav}
-          showToast={showToast}
-        />
-
+      <main style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
         {/* Content Pane */}
-        <section className="panel" style={{ overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-main)' }} id="main-telemetry-content">
+        <section className="panel" style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--bg-main)' }} id="main-telemetry-content">
           
-          {/* 1. Page Header with Title, Subtitle, and Clock controllers */}
+          {/* View Mode Toggle — always visible */}
+          <div className="top-controls" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setViewMode('demo')}
+                style={{
+                  padding: '8px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: viewMode === 'demo' ? '2px solid var(--rta-blue)' : '1px solid var(--border-color)',
+                  background: viewMode === 'demo' ? 'rgba(14, 165, 233, 0.1)' : 'var(--bg-card)',
+                  color: viewMode === 'demo' ? 'var(--rta-blue)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                Live Demo
+              </button>
+              <button
+                onClick={() => setViewMode('planner')}
+                style={{
+                  padding: '8px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: viewMode === 'planner' ? '2px solid var(--rta-blue)' : '1px solid var(--border-color)',
+                  background: viewMode === 'planner' ? 'rgba(14, 165, 233, 0.1)' : 'var(--bg-card)',
+                  color: viewMode === 'planner' ? 'var(--rta-blue)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                Detailed Planner
+              </button>
+
+              {/* Time Window Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '12px', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Time Window:</span>
+                <select
+                  value={timeSelectionMode === 'auto' ? 'auto' : String(hour)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'auto') {
+                      setTimeSelectionMode('auto');
+                      showToast("Auto mode activated: Selecting highest pressure hour.", "info");
+                    } else {
+                      setTimeSelectionMode('manual');
+                      setHour(parseInt(val, 10));
+                      showToast(`Selected peak hour: ${val.padStart(2, '0')}:00`, "info");
+                    }
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    fontWeight: 650,
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-title)',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="7">07:00–08:00</option>
+                  <option value="8">08:00–09:00</option>
+                  <option value="9">09:00–10:00</option>
+                  <option value="17">17:00–18:00</option>
+                  <option value="18">18:00–19:00</option>
+                  <option value="19">19:00–20:00</option>
+                  <option value="auto">Auto: Highest Pressure Hour</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+              {/* Dynamic Scenario Time Badge */}
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '13px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              }}>
+                <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>Scenario Time:</span>{' '}
+                <strong style={{ color: 'var(--text-title)', fontWeight: 700 }}>
+                  {String(hour % 12 || 12).padStart(2, '0')}:00 {hour >= 12 ? 'PM' : 'AM'}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          {viewMode === 'demo' ? (
+            <DemandShiftDecisionScreen
+              corridor={selectedCorridor}
+              corridors={corridors}
+              selectedLocationId={selectedLocationId}
+              setSelectedLocationId={setSelectedLocationId}
+              onApprove={() => triggerDecision('approve')}
+              onReview={() => triggerDecision('review')}
+              onDismiss={() => triggerDecision('reject')}
+              appliedActions={appliedActions}
+              theme={theme}
+              workflowResponse={workflowResponse}
+              isWorkflowLoading={isWorkflowLoading}
+              workflowError={workflowError}
+              handleTriggerWorkflow={handleTriggerWorkflow}
+              activeScenarioId={activeScenarioId}
+              hour={hour}
+            />
+          ) : (
+          <>
+
+          {/* Old Planner Header — only in detailed mode */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <h2 style={{ fontSize: '30px', fontWeight: 800, color: 'var(--text-title)', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.15 }}>
-                  PeakFlow Operations Dashboard
+                  PeakFlow Demand Shift & Flow Support Engine
                 </h2>
                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-                  Predict congestion, compare prevention options, and prepare AI-assisted operator briefings.
+                  AI engine that calculates peak demand pressure and recommends campaigns to flatten congestion.
                 </p>
               </div>
             </div>
@@ -414,30 +638,40 @@ export default function Page() {
             </div>
           </div>
 
+
+
           <DashboardTabs 
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             selectedLocationId={selectedLocationId}
             showToast={showToast}
           />
-
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--rta-blue)', padding: '16px 20px', borderRadius: '8px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
-            <strong>Operational View Active:</strong> {activeScenarioId === 'pm-peak-demo' 
-              ? 'PM peak pressure is building. The system ranks the highest-risk roads and recommends prevention actions before congestion becomes critical.' 
+          <div style={{ background: 'var(--bg-card)', borderTop: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', borderBottom: '1px solid var(--border-color)', borderLeft: '4px solid var(--rta-blue)', padding: '16px 20px', borderRadius: '8px', fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            <strong>Scenario Active:</strong> {activeScenarioId === 'pm-peak-demo' 
+              ? `AM peak demand exceeds safe road capacity on ${selectedCorridor ? selectedCorridor.road_name : 'SZR → DIFC / Business Bay'}. PeakFlow calculates the employer flex and incentive mix to flatten the 08:00–09:00 peak.` 
               : activeScenarioId === 'creek-crossing-demo'
-              ? 'Garhoud Bridge is heavily congested. The system compares crossing risks and recommends rerouting to lower-risk bridges.'
+              ? `${selectedCorridor ? selectedCorridor.road_name : 'Al Garhoud Bridge'} demand at capacity limit. PeakFlow recommends Metro incentive shift and flow support.`
               : activeScenarioId === 'signal-delay-demo'
-              ? 'Adaptive signal reviews active. Review fixed-time signal programs at Deira to adjust splits and clear approaches.'
-              : 'Stress testing city-wide response. Massive volume shifts from flooded roads to Metro transit routes.'}
+              ? `${selectedCorridor ? selectedCorridor.road_name : 'Junction bottleneck'} amplifying demand backup. PeakFlow recommends employer flex and signal flow support.`
+              : `Rain event increasing road pressure on ${selectedCorridor ? selectedCorridor.road_name : 'corridors'}. PeakFlow recommends Metro shift incentive and off-peak parking reward.`}
           </div>
 
           <div className="panel-content" style={{ overflowY: 'visible', paddingTop: 0, flex: 1 }}>
             {activeTab === 'overview' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* KPI Metrics Group */}
-                <KpiCards kpis={kpis} hour={hour} />
+                {/* Demand-Focused KPI Cards */}
+                <KpiCards kpis={kpis} hour={hour} selectedCorridor={selectedCorridor} activeScenarioId={activeScenarioId} />
 
-                {/* Hotspot Ranking Table */}
+                {/* Before vs After Hero Card */}
+                <DemandShiftHero 
+                  corridor={selectedCorridor}
+                  activeScenarioId={activeScenarioId}
+                  onApprove={() => triggerDecision('approve')}
+                  onReview={() => triggerDecision('review')}
+                  onDismiss={() => triggerDecision('reject')}
+                />
+
+                {/* Corridor Demand Pressure Ranking */}
                 <TrafficRiskTable 
                   sortedCorridors={sortedCorridors}
                   selectedLocationId={selectedLocationId}
@@ -465,301 +699,32 @@ export default function Page() {
             </div>
 
             {activeTab === 'forecast' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-forecast-actions-grid">
-                
-                {/* Left side: Hotspot Summary & Telemetry/24-Hr Speed Profile */}
-                <div>
-                  {selectedCorridor ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      
-                      {/* 1. Hotspot Summary Card */}
-                      <div className="detail-card" style={{ padding: '20px' }}>
-                        <h3 style={{ fontSize: '20px', fontWeight: 800, borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', marginBottom: '12px', color: 'var(--text-title)' }}>
-                          Selected Corridor Summary
-                        </h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                          <div>
-                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Location</div>
-                            <strong style={{ fontSize: '18px', color: 'var(--text-primary)' }}>{selectedCorridor.road_name} ({selectedCorridor.direction})</strong>
-                            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>Area: {selectedCorridor.area} · {selectedCorridor.num_lanes} Lanes</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Current Risk Level</div>
-                            <span style={{ fontSize: '18px', fontWeight: 800, color: selectedCorridor.congestion_pressure_score >= 80 ? 'var(--color-critical)' : selectedCorridor.congestion_pressure_score >= 60 ? 'var(--color-high)' : selectedCorridor.congestion_pressure_score >= 40 ? 'var(--color-medium)' : 'var(--color-low)' }}>
-                              {selectedCorridor.congestion_pressure_score} / 100 ({selectedCorridor.risk_level})
-                            </span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-                          <div>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Avg Speed:</span>
-                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.avg_speed_kph} kph</strong>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>V/C Ratio:</span>
-                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.vc_ratio.toFixed(2)}x</strong>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Travel Time Index:</span>
-                            <strong style={{ fontSize: '15px', display: 'block', color: 'var(--text-primary)' }}>{selectedCorridor.travel_time_index.toFixed(2)}x</strong>
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '14px' }}>
-                          <div><strong>Main Cause:</strong> {selectedCorridor.incident_affected ? 'Active lane-blocking traffic collision' : 'Peak commuter rush hour volume'}</div>
-                          <div style={{ marginTop: '4px' }}><strong>Recommended:</strong> <span style={{ color: 'var(--rta-blue)', fontWeight: 700 }}>{selectedRecommendation.action}</span></div>
-                        </div>
-                      </div>
-
-                      {/* 2. 24-Hour Speed Profile Line Chart */}
-                      {selectedCorridor.speedHistory && selectedCorridor.speedHistory.length > 0 && (
-                        <div className="detail-card" style={{ padding: '20px' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--text-title)', fontSize: '18px', display: 'block', marginBottom: '12px' }}>
-                            24-Hour Speed Profile (kph)
-                          </span>
-                          <div style={{ background: 'var(--bg-main)', padding: '16px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                            <svg viewBox="0 0 500 120" style={{ width: '100%', height: '120px' }}>
-                              {/* Grid lines */}
-                              <line x1="0" y1="20" x2="500" y2="20" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
-                              <line x1="0" y1="60" x2="500" y2="60" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
-                              <line x1="0" y1="100" x2="500" y2="100" stroke="var(--border-color)" strokeWidth="0.5" strokeDasharray="4" />
-                              
-                              <path
-                                d={selectedCorridor.speedHistory.map((s, idx) => {
-                                  const x = (idx / (selectedCorridor.speedHistory.length - 1)) * 500;
-                                  const y = 110 - (s / 100) * 90;
-                                  return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
-                                }).join(' ')}
-                                fill="none"
-                                stroke="var(--rta-blue)"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-
-                              {/* Simulation Current Hour dot */}
-                              {(() => {
-                                const h = hour % selectedCorridor.speedHistory.length;
-                                const x = (h / (selectedCorridor.speedHistory.length - 1)) * 500;
-                                const s = selectedCorridor.speedHistory[h] || 60;
-                                const y = 110 - (s / 100) * 90;
-                                return (
-                                  <g>
-                                    <circle cx={x} cy={y} r="6" fill="var(--rta-red)" />
-                                    <circle cx={x} cy={y} r="12" fill="none" stroke="var(--rta-red)" strokeWidth="1.5" style={{ opacity: 0.5 }} />
-                                  </g>
-                                );
-                              })()}
-                            </svg>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                              <span>00:00</span>
-                              <span style={{ color: 'var(--rta-red)', fontWeight: 600 }}>TOC Hour ({String(hour).padStart(2, '0')}:00)</span>
-                              <span>23:00</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 3. Nearby intersection telemetry */}
-                      <div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px', color: 'var(--text-title)' }}>
-                          Junction & Alternate Route Telemetry
-                        </div>
-                        <CorridorDetails 
-                          selectedCorridor={selectedCorridor}
-                          selectedLocationId={selectedLocationId}
-                          appliedActions={appliedActions}
-                          mitigatedData={mitigatedData}
-                          activeScenarioId={activeScenarioId}
-                          corridors={corridors}
-                          setSelectedLocationId={setSelectedLocationId}
-                          alternatives={alternatives}
-                          junctionPerformance={junctionPerformance}
-                        />
-                      </div>
-
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                      No corridor selected. Please select a hotspot.
-                    </div>
-                  )}
-                </div>
-
-                {/* Right side: AI Forecast & What-If Simulator */}
-                {selectedCorridor && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    
-                    {/* Explainable AI Forecast details */}
-                    {selectedCorridor.forecast && (
-                      <div className="detail-card animate-fade-in" style={{ padding: '20px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '12px' }}>
-                          Explainable AI Forecast
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>Predictive Window:</span>
-                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Next 30–60 Minutes</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px' }}>
-                            <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
-                            <span style={{ fontWeight: 700, color: 'var(--rta-blue)' }}>{selectedCorridor.forecast.forecast_confidence}%</span>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '8px' }}>Top Contributing Factors:</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {selectedCorridor.forecast.topContributingFeatures.map((f: string, idx: number) => (
-                                <span key={idx} className="cause-tag" style={{ background: 'var(--rta-blue-bg)', color: 'var(--rta-blue)', border: '1px solid var(--rta-blue-border)', fontSize: '13px', padding: '4px 10px', borderRadius: '4px' }}>
-                                  {f}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '6px' }}>
-                            * Simulation estimate based on current corridor telemetry and sandbox data.
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* What-If Simulator Options Stack */}
-                    <div className="detail-card" style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="kpi-title" style={{ fontSize: '16px', fontWeight: 750 }}>What-If Prevention Simulator</span>
-                        {appliedActions[selectedLocationId || ''] && (
-                          <span className="badge-risk low" style={{ fontSize: '11px', padding: '2px 6px' }}>Action split active</span>
-                        )}
-                      </div>
-
-                      <div className="recommend-badge" style={{ marginBottom: '2px', fontSize: '13px', padding: '4px 8px' }}>
-                        Recommended Option: {selectedRecommendation.action}
-                      </div>
-
-                      {/* Compact Mitigation selector tiles grid */}
-                      <div className="mitigation-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                        {simulatorOptions.map(opt => {
-                          const isSelected = activeMitigationKey === opt.key;
-                          const isRecommended = opt.key === recommendedSimKey;
-                          
-                          let borderStyle = '1px solid var(--border-color)';
-                          if (isSelected) borderStyle = '2px solid var(--rta-blue)';
-                          else if (isRecommended) borderStyle = '1px dashed var(--color-low)';
-
-                          return (
-                            <div
-                              key={opt.key}
-                              onClick={() => setMitigations(prev => ({ ...prev, [selectedLocationId || '']: opt.key }))}
-                              style={{
-                                background: isSelected ? 'var(--rta-blue-bg)' : 'var(--bg-card)',
-                                border: borderStyle,
-                                borderRadius: '8px',
-                                padding: '10px 6px',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.15s ease'
-                              }}
-                              className={`mitigation-tile ${isSelected ? 'active' : ''}`}
-                            >
-                              <div style={{ color: isSelected ? 'var(--rta-blue)' : 'var(--text-secondary)' }}>
-                                {opt.icon}
-                              </div>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-title)', lineHeight: 1.2 }}>
-                                {opt.title}
-                              </div>
-                              {isRecommended && (
-                                <span style={{ fontSize: '8px', background: 'rgba(34, 197, 94, 0.15)', color: 'var(--color-low)', padding: '1px 4px', borderRadius: '3px', fontWeight: 700, textTransform: 'uppercase' }}>
-                                  REC
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Selected option analysis and delta predictions */}
-                      {(() => {
-                        const selectedOpt = simulatorOptions.find(o => o.key === activeMitigationKey) || simulatorOptions[5];
-                        const isMonitor = selectedOpt.key === 'monitor';
-                        const optImpact = selectedOpt.impact;
-
-                        return (
-                          <div className="detail-card animate-fade-in" style={{ padding: '14px', background: 'var(--bg-panel)', border: '1px solid var(--border-color)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-title)' }}>
-                                Analysis: {selectedOpt.title}
-                              </span>
-                              <span style={{ fontSize: '11px', padding: '1px 6px', borderRadius: '4px', background: selectedOpt.key === recommendedSimKey ? 'rgba(34, 197, 94, 0.15)' : 'var(--border-color)', color: selectedOpt.key === recommendedSimKey ? 'var(--color-low)' : 'var(--text-secondary)', fontWeight: 700 }}>
-                                {selectedOpt.key === recommendedSimKey ? 'RECOMMENDED' : selectedOpt.key === 'monitor' ? 'BASELINE' : 'SIMULATION'}
-                              </span>
-                            </div>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-                              {selectedOpt.desc}
-                            </p>
-                            
-                            {!isMonitor && optImpact && (
-                              <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4, background: 'var(--bg-main)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                                <strong>Efficacy Analysis:</strong> {optImpact.reason}
-                              </div>
-                            )}
-
-                            {!isMonitor && optImpact && (
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '12px' }}>
-                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Proj. Risk</span>
-                                  <strong style={{ color: 'var(--text-primary)' }}>
-                                    {optImpact.afterRisk} ({optImpact.afterLevel})
-                                  </strong>
-                                </div>
-                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Speed Delta</span>
-                                  <strong style={{ color: 'var(--color-low)' }}>
-                                    {optImpact.speedDeltaKph > 0 ? `+${optImpact.speedDeltaKph}` : '0'} kph
-                                  </strong>
-                                </div>
-                                <div style={{ background: 'var(--bg-main)', padding: '6px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>Volume Delta</span>
-                                  <strong style={{ color: optImpact.volumeDeltaVph < 0 ? 'var(--color-low)' : 'var(--text-primary)' }}>
-                                    {optImpact.volumeDeltaVph} vph
-                                  </strong>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Mitigated Scenario Target Projection (Expected Impact Preview) */}
-                      {mitigatedData && (
-                        <div className="detail-card animate-fade-in" style={{ padding: '14px', background: 'var(--rta-blue-bg)', border: '1px solid var(--rta-blue-border)', borderLeft: '4px solid var(--rta-blue)', marginTop: '8px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-title)', marginBottom: '4px' }}>
-                            Mitigated Scenario Target Projection
-                          </div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
-                            Applying <strong>{activeMitigationKey === 'route-advisory' ? 'Route Advisory' : activeMitigationKey === 'signal-timing' ? 'Signal Timing split overrides' : activeMitigationKey === 'metro-riders' ? 'Metro transit shifts' : activeMitigationKey === 'salik-shift' ? 'Salik pricing discounts' : activeMitigationKey === 'incident-response' ? 'Emergency responder coordination' : 'Monitor Mode'}</strong> is projected to reduce corridor congestion score to <span style={{ color: 'var(--color-low)', fontWeight: 700 }}>{mitigatedData.score} ({mitigatedData.level})</span>.
-                          </div>
-                        </div>
-                      )}
-
-                    </div>
-                  </div>
-                )}
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <DemandCampaignPlanner
+                  corridor={selectedCorridor}
+                  activeScenarioId={activeScenarioId}
+                  onApprove={triggerCustomDecision}
+                  showToast={showToast}
+                  workflowResponse={workflowResponse}
+                  isWorkflowLoading={isWorkflowLoading}
+                  handleTriggerWorkflow={handleTriggerWorkflow}
+                />
               </div>
             )}
 
             {activeTab === 'briefing' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }} className="demo-briefing-grid">
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: (approvedImpact || decisionLog.length > 0) ? '1.2fr 0.8fr' : '1fr', 
+                gap: '20px' 
+              }} className="demo-briefing-grid">
                 <div>
                   <AiBriefingPanel 
                     briefing={briefing}
                     isGeneratingBrief={isGeneratingBrief}
                     handleGenerateBriefing={handleGenerateBriefing}
                     selectedCorridor={selectedCorridor}
+                    activeScenarioId={activeScenarioId}
                     handleOperatorDecision={triggerDecision}
                     formatBriefField={formatBriefField}
                     buildSafeSituationSummary={buildSafeSituationSummary}
@@ -767,20 +732,23 @@ export default function Page() {
                     mitigatedData={mitigatedData}
                     workflowResponse={workflowResponse}
                     isWorkflowLoading={isWorkflowLoading}
+                    workflowError={workflowError}
                     handleTriggerWorkflow={handleTriggerWorkflow}
+                    selectedRecommendation={selectedRecommendation}
+                    hour={hour}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <PreventionImpactSummary approvedImpact={approvedImpact} />
-                  <OperatorDecisionLog decisionLog={decisionLog} />
-                </div>
+                {(approvedImpact || decisionLog.length > 0) && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <PreventionImpactSummary approvedImpact={approvedImpact} />
+                    <OperatorDecisionLog decisionLog={decisionLog} />
+                  </div>
+                )}
               </div>
             )}
-
-            {activeTab === 'chat' && (
-              <AiChatPanel />
-            )}
           </div>
+          </>
+          )}
         </section>
       </main>
 
@@ -793,15 +761,15 @@ export default function Page() {
             top: '24px',
             right: '24px',
             zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.95)',
+            background: 'var(--bg-card)',
             backdropFilter: 'blur(8px)',
-            borderLeft: toast.type === 'success' ? '4px solid var(--color-low)' : toast.type === 'warning' ? '4px solid var(--color-medium)' : '4px solid var(--rta-blue)',
+            borderLeft: toast.type === 'success' ? '4px solid #22c55e' : toast.type === 'warning' ? '4px solid #f59e0b' : '4px solid var(--rta-blue)',
             borderTop: '1px solid var(--border-color)',
             borderRight: '1px solid var(--border-color)',
             borderBottom: '1px solid var(--border-color)',
             borderRadius: '8px',
             padding: '16px 20px',
-            boxShadow: 'var(--shadow-focus)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
@@ -809,7 +777,7 @@ export default function Page() {
             animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          <div style={{ flex: 1, fontSize: '14.5px', fontWeight: 600, color: 'var(--text-title)', lineHeight: 1.4 }}>
+          <div style={{ flex: 1, fontSize: '14.5px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4 }}>
             {toast.message}
           </div>
           <button 

@@ -6,7 +6,8 @@ import {
   getCoordinatesForCorridor, 
   getValidDubaiHotspots 
 } from '../lib/mapCoordinates';
-import { Navigation, Compass, AlertCircle, RefreshCw } from 'lucide-react';
+import { Navigation, Compass, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { calcDemandPressure } from '../lib/demandShiftEngine';
 
 interface DubaiLeafletMapProps {
   corridors: Corridor[];
@@ -14,6 +15,8 @@ interface DubaiLeafletMapProps {
   setSelectedLocationId: (id: string) => void;
   theme: 'dark' | 'light';
   activeTab: ActiveTab;
+  workflowResponse?: any;
+  isLiveDemo?: boolean;
 }
 
 export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
@@ -21,9 +24,12 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   selectedLocationId,
   setSelectedLocationId,
   theme,
-  activeTab
+  activeTab,
+  workflowResponse,
+  isLiveDemo = false
 }) => {
   const [viewMode, setViewMode] = useState<'tactical' | 'gis'>('gis');
+  const [mapStyle, setMapStyle] = useState<'carto-dark' | 'inverted-osm' | 'osm-light'>('osm-light');
 
   // Leaflet Refs
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -43,8 +49,8 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
 
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current, {
-        center: [25.2048, 55.2708],
-        zoom: 11,
+        center: [25.22, 55.32],
+        zoom: 12,
         zoomControl: false,
         preferCanvas: false,
         zoomAnimation: true,
@@ -53,16 +59,6 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
       });
 
       L.control.zoom({ position: 'topright' }).addTo(mapRef.current);
-      
-      const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-      tileLayerRef.current = L.tileLayer(tileUrl, { 
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
-        updateWhenIdle: true,
-        keepBuffer: 2
-      }).addTo(mapRef.current);
-
       markerGroupRef.current = L.layerGroup().addTo(mapRef.current);
     }
 
@@ -71,34 +67,99 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
         mapRef.current.remove();
         mapRef.current = null;
         markersRef.current = {};
+        tileLayerRef.current = null;
       }
     };
   }, [viewMode]);
 
+  // 1b. Dynamic Basemap Tile Layer Manager
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || viewMode !== 'gis') return;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
+    }
+
+    let url = '';
+    let options: L.TileLayerOptions = {};
+
+    if (mapStyle === 'carto-dark') {
+      url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+      options = {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+        updateWhenIdle: true,
+        keepBuffer: 2
+      };
+    } else if (mapStyle === 'inverted-osm') {
+      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      options = {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+        className: 'custom-dark-tiles',
+        updateWhenIdle: true,
+        keepBuffer: 2
+      };
+    } else {
+      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+      options = {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+        updateWhenIdle: true,
+        keepBuffer: 2
+      };
+    }
+
+    try {
+      tileLayerRef.current = L.tileLayer(url, options).addTo(map);
+    } catch (e) {
+      console.error("Failed to add tile layer:", e);
+    }
+  }, [mapStyle, viewMode]);
+
   // 2. Leaflet Tab Resizing Sync
   useEffect(() => {
+    let active = true;
     const map = mapRef.current;
     if (!map || viewMode !== 'gis') return;
 
     if (activeTab === 'map') {
       setTimeout(() => {
-        map.invalidateSize({ animate: false });
+        if (!active || mapRef.current !== map || !mapContainerRef.current) return;
         
-        const currentCenter = map.getCenter();
-        if (!isValidDubaiCoordinate(currentCenter.lat, currentCenter.lng)) {
-          map.setView([25.2048, 55.2708], 11, { animate: false });
+        try {
+          map.invalidateSize({ animate: false });
+          
+          const currentCenter = map.getCenter();
+          if (currentCenter && !isValidDubaiCoordinate(currentCenter.lat, currentCenter.lng)) {
+            map.setView([25.22, 55.32], 12, { animate: false });
+          }
+        } catch (e) {
+          console.error("Error setting map center:", e);
         }
 
         if (validHotspots.length >= 2) {
-          const latLngs = validHotspots.map(h => {
+          // Exclude outlying enclaves (Emirates Road and Dubai South Expo Road) to keep the map focused on central corridors
+          const centralHotspots = validHotspots.filter(h => h.location_id !== 'EMR_E1' && h.location_id !== 'DWC_X1');
+          const latLngs = (centralHotspots.length >= 2 ? centralHotspots : validHotspots).map(h => {
             const coords = getCoordinatesForCorridor(h.location_id);
             return L.latLng(coords.lat, coords.lng);
           });
           const bounds = L.latLngBounds(latLngs);
-          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+          try {
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+          } catch (e) {
+            console.error("Error fitting map bounds:", e);
+          }
         }
       }, 150);
     }
+    return () => {
+      active = false;
+    };
   }, [activeTab, viewMode]);
 
   // 3. GIS Markers Builder
@@ -134,38 +195,108 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
         iconAnchor: [size / 2, size / 2]
       });
 
-      const popupHtml = `
-        <div style="font-family: var(--font-body); min-width: 220px; font-size: 13.5px; color: var(--text-primary); padding: 4px;">
-          <div style="font-weight: 800; font-family: var(--font-display); font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px; color: var(--text-title);">
-            ${cor.road_name} (${cor.direction})
+      let popupHtml = '';
+      if (isLiveDemo) {
+        // Real per-corridor demand math (same formulas as demandShiftEngine)
+        const demand = cor.demand_vph !== undefined ? cor.demand_vph : (cor.volume_vph || 0);
+        const capacity = cor.capacity_vph || 12000;
+        const safeTarget = Math.round(capacity * 0.80);
+        const excess = Math.max(0, demand - safeTarget);
+        const shiftPct = demand > 0 ? Math.ceil((excess / demand) * 100) : 0;
+
+        let pressureLabel = '';
+        let pressureColor = '';
+        if (excess <= 0) {
+          pressureLabel = "Within target";
+          pressureColor = "#22c55e"; // green
+        } else if (shiftPct > 0 && shiftPct < 15) {
+          pressureLabel = "Elevated";
+          pressureColor = "#f97316"; // orange
+        } else {
+          pressureLabel = "High";
+          pressureColor = "#ef4444"; // red
+        }
+
+        let computedLos = 'A';
+        const vc = cor.vc_ratio || 0;
+        if (vc <= 0.35) computedLos = 'A';
+        else if (vc <= 0.55) computedLos = 'B';
+        else if (vc <= 0.75) computedLos = 'C';
+        else if (vc <= 0.90) computedLos = 'D';
+        else if (vc <= 1.00) computedLos = 'E';
+        else computedLos = 'F';
+
+        const excessRows = excess > 0 ? `
+              <div style="margin-bottom: 4px;"><strong>Excess demand above operating target:</strong> <span style="color: var(--color-critical); font-weight: 700;">+${excess.toLocaleString()} trips/hr</span></div>
+              <div style="margin-bottom: 4px;"><strong>Required shift:</strong> <span style="color: var(--color-high); font-weight: 700;">${shiftPct}%</span></div>` : `
+              <div style="margin-bottom: 4px;"><strong>Excess demand above operating target:</strong> <span style="color: var(--color-low); font-weight: 700;">0 trips/hr (within target)</span></div>`;
+
+        popupHtml = `
+          <div style="font-family: var(--font-body); min-width: 220px; font-size: 13.5px; color: var(--text-primary); padding: 4px;">
+            <div style="font-weight: 800; font-family: var(--font-display); font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px; color: var(--text-title);">
+              ${cor.road_name} (${cor.direction})
+            </div>
+            <div style="margin-bottom: 4px;"><strong>Demand pressure:</strong> <span style="color: ${pressureColor}; font-weight: 700;">${pressureLabel}</span></div>${excessRows}
+            <div style="margin-bottom: 3px;"><strong>V/C ratio:</strong> <span>${cor.vc_ratio.toFixed(2)}</span></div>
+            <div style="margin-bottom: 3px;"><strong>LOS:</strong> <span>${computedLos}</span></div>
           </div>
-          <div><strong>Risk Score:</strong> ${score} (${riskLevel})</div>
-          <div><strong>Avg Speed:</strong> ${cor.avg_speed_kph} kph</div>
-          <div><strong>Cause:</strong> ${cor.incident_affected ? 'Incident blockages' : 'Commuter flow'}</div>
-        </div>
-      `;
+        `;
+      } else {
+        popupHtml = `
+          <div style="font-family: var(--font-body); min-width: 220px; font-size: 13.5px; color: var(--text-primary); padding: 4px;">
+            <div style="font-weight: 800; font-family: var(--font-display); font-size: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px; color: var(--text-title);">
+              ${cor.road_name} (${cor.direction})
+            </div>
+            <div><strong>Demand Pressure:</strong> ${score} (${riskLevel})</div>
+            <div><strong>Avg Speed:</strong> ${cor.avg_speed_kph} kph</div>
+            <div><strong>Cause:</strong> ${cor.incident_affected ? 'Incident blockages' : 'Commuter flow'}</div>
+          </div>
+        `;
+      }
 
       const existingMarker = markersRef.current[cor.location_id];
       if (existingMarker) {
         existingMarker.setIcon(icon);
-        existingMarker.setPopupContent(popupHtml);
+        if (popupHtml) {
+          existingMarker.setPopupContent(popupHtml);
+        }
+        if (isSelected && popupHtml) {
+          existingMarker.openPopup();
+        }
       } else {
         const marker = L.marker([coords.lat, coords.lng], { icon })
-          .addTo(markerGroup)
-          .bindPopup(popupHtml, { closeButton: false, offset: [0, -10] });
+          .addTo(markerGroup);
+        
+        if (popupHtml) {
+          marker.bindPopup(popupHtml, { closeButton: false, offset: [0, -10] });
+        }
 
         marker.on('click', () => {
           setSelectedLocationId(cor.location_id);
+          marker.openPopup();
         });
 
         markersRef.current[cor.location_id] = marker;
+        if (isSelected && popupHtml) {
+          marker.openPopup();
+        }
       }
     });
   }, [corridors, selectedLocationId, viewMode]);
 
   // 4. GIS Selection Pan
   useEffect(() => {
+    let active = true;
     if (viewMode !== 'gis') return;
+
+    // Proactively open the popup of the selected corridor marker
+    if (selectedLocationId) {
+      const selectedMarker = markersRef.current[selectedLocationId];
+      if (selectedMarker) {
+        selectedMarker.openPopup();
+      }
+    }
+
     Object.entries(markersRef.current).forEach(([locId, marker]) => {
       const isSelected = locId === selectedLocationId;
       const element = marker.getElement();
@@ -174,16 +305,14 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
           element.classList.add('selected');
           const coords = getCoordinatesForCorridor(locId);
           mapRef.current?.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 });
-          setTimeout(() => {
-            if (marker.getPopup() && !marker.getPopup()?.isOpen()) {
-              marker.openPopup();
-            }
-          }, 100);
         } else {
           element.classList.remove('selected');
         }
       }
     });
+    return () => {
+      active = false;
+    };
   }, [selectedLocationId, viewMode]);
 
   // Dynamic routing parameters matching Waze options
@@ -300,7 +429,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
     });
 
     // Draw Suggested Alternative Route Overlay if bottleneck selected
-    if (selectedLocationId) {
+    if (selectedLocationId && Math.random() < -1) {
       let mainRoutePath: L.LatLngTuple[] = [];
       let altPath: L.LatLngTuple[] = [];
       let congestedBadgeCoords: [number, number] = [0, 0];
@@ -511,13 +640,14 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
 
   const handleResetView = () => {
     if (viewMode === 'gis' && mapRef.current) {
-      mapRef.current.setView([25.2048, 55.2708], 11, { animate: true });
+      mapRef.current.setView([25.22, 55.32], 12, { animate: true });
     }
   };
 
   const handleFitHotspots = () => {
     if (viewMode === 'gis' && mapRef.current && validHotspots.length >= 2) {
-      const latLngs = validHotspots.map(h => {
+      const centralHotspots = validHotspots.filter(h => h.location_id !== 'EMR_E1' && h.location_id !== 'DWC_X1');
+      const latLngs = (centralHotspots.length >= 2 ? centralHotspots : validHotspots).map(h => {
         const coords = getCoordinatesForCorridor(h.location_id);
         return L.latLng(coords.lat, coords.lng);
       });
@@ -527,33 +657,9 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
   };
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)', background: '#07111F' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '400px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-color)', background: viewMode === 'tactical' ? '#07111F' : 'var(--bg-main)' }}>
       
-      {/* Floating Toggle View Mode control */}
-      <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 1000, display: 'flex', gap: '8px' }}>
-        <button
-          onClick={() => setViewMode(v => v === 'tactical' ? 'gis' : 'tactical')}
-          style={{
-            background: 'rgba(14, 165, 233, 0.95)',
-            color: 'white',
-            border: 'none',
-            padding: '8px 14px',
-            fontSize: '14px',
-            fontWeight: 700,
-            borderRadius: '6px',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.2)'
-          }}
-        >
-          {viewMode === 'tactical' ? 'Switch to GIS Sat-Map' : 'Switch to Tactical View'}
-        </button>
-      </div>
 
-      {/* RTA Operations Header Banner */}
-      <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 1000, background: 'rgba(11, 18, 32, 0.85)', backdropFilter: 'blur(4px)', color: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 700, border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0EA5E9', display: 'inline-block', animation: 'pulse 1.5s infinite' }}></span>
-        Dubai Operations Center — {viewMode === 'tactical' ? 'Tactical Telemetry Grid' : 'GIS Satellite View'}
-      </div>
 
       {/* VIEW MODE 1: TACTICAL SVG VIEWPORT */}
       {viewMode === 'tactical' && (
@@ -596,9 +702,27 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
               const isSelected = selectedLocationId === node.id;
 
               let color = 'var(--color-low)';
-              if (score >= 80) color = 'var(--color-critical)';
-              else if (score >= 60) color = 'var(--color-high)';
-              else if (score >= 40) color = 'var(--color-medium)';
+              let riskLabel = 'Within target';
+
+              if (isLiveDemo) {
+                const corPressure = calcDemandPressure(cor);
+                const corExcess = corPressure.excess;
+                const corShiftPct = corPressure.excessPct;
+                if (corExcess <= 0) {
+                  color = 'var(--color-low)'; // green
+                  riskLabel = 'Within target';
+                } else if (corShiftPct > 0 && corShiftPct < 15) {
+                  color = 'var(--color-medium)'; // orange
+                  riskLabel = 'Elevated';
+                } else {
+                  color = 'var(--color-critical)'; // red
+                  riskLabel = 'High';
+                }
+              } else {
+                if (score >= 80) { color = 'var(--color-critical)'; riskLabel = 'Critical'; }
+                else if (score >= 60) { color = 'var(--color-high)'; riskLabel = 'High'; }
+                else if (score >= 40) { color = 'var(--color-medium)'; riskLabel = 'Medium'; }
+              }
 
               return (
                 <g 
@@ -618,7 +742,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
                     <g>
                       <rect x={node.x - 70} y={node.y - 45} width="140" height="24" rx="4" fill="var(--bg-panel)" stroke="var(--border-color)" strokeWidth="1" />
                       <text x={node.x} y={node.y - 29} textAnchor="middle" fill="var(--text-primary)" style={{ fontSize: '11px', fontWeight: 700 }}>
-                        {cor.road_name} ({score} Risk)
+                        {cor.road_name} ({riskLabel})
                       </text>
                     </g>
                   )}
@@ -631,11 +755,23 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
           {selectedLocationId && (() => {
             const cor = corridors.find(c => c.location_id === selectedLocationId);
             if (!cor) return null;
-            const score = cor.congestion_pressure_score;
-            let riskLevel = 'Low';
-            if (score >= 80) riskLevel = 'Critical';
-            else if (score >= 60) riskLevel = 'High';
-            else if (score >= 40) riskLevel = 'Medium';
+
+            const corPressure = calcDemandPressure(cor);
+            const corExcess = corPressure.excess;
+            const corShiftPct = corPressure.excessPct;
+
+            let corPressureLabel = '';
+            let corColor = '';
+            if (corExcess <= 0) {
+              corPressureLabel = "Within target";
+              corColor = "var(--color-low)"; // green
+            } else if (corShiftPct > 0 && corShiftPct < 15) {
+              corPressureLabel = "Elevated";
+              corColor = "var(--color-medium)"; // orange
+            } else {
+              corPressureLabel = "High";
+              corColor = "var(--color-critical)"; // red
+            }
 
             return (
               <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(11, 18, 32, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', color: 'white', width: '280px', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}>
@@ -643,7 +779,7 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
                   {cor.road_name} ({cor.direction})
                 </div>
                 <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div><strong>Risk Score:</strong> <span style={{ color: score >= 80 ? 'var(--color-critical)' : score >= 60 ? 'var(--color-high)' : 'var(--color-low)', fontWeight: 700 }}>{score} ({riskLevel})</span></div>
+                  <div><strong>Demand Pressure:</strong> <span style={{ color: corColor, fontWeight: 700 }}>{corPressureLabel}</span></div>
                   <div><strong>Avg Speed:</strong> {cor.avg_speed_kph} kph</div>
                   <div><strong>Flow Volume:</strong> {cor.volume_vph} vph</div>
                   <div><strong>Main Cause:</strong> {cor.incident_affected ? 'Collision Blockage' : 'Commuter Peak Flow'}</div>
@@ -672,151 +808,6 @@ export const DubaiLeafletMap: React.FC<DubaiLeafletMapProps> = ({
           ) : (
             <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} id="dubai-leaflet-map" />
           )}
-
-          {/* Premium Google Maps / Waze style Routing overlay card */}
-          <div 
-            style={{ 
-              position: 'absolute', 
-              bottom: '24px', 
-              left: '24px', 
-              zIndex: 1000, 
-              background: 'rgba(15, 23, 42, 0.93)', 
-              backdropFilter: 'blur(10px)', 
-              border: '1px solid rgba(255, 255, 255, 0.1)', 
-              borderRadius: '16px', 
-              padding: '18px', 
-              width: '330px', 
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              color: 'white'
-            }}
-          >
-            {/* Header info */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px' }}>
-              <Navigation size={18} className="text-secondary" style={{ color: 'var(--rta-blue)' }} />
-              <div>
-                <span style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>AI Routing Analyst</span>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-title)' }}>
-                  {selectedCorridor ? 'Bypass Suggestions' : 'Dubai Traffic Network'}
-                </div>
-              </div>
-            </div>
-
-            {/* Routing state details */}
-            {showRouting && selectedCorridor ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                
-                {/* 1. Recommended Route Option */}
-                <div style={{ display: 'flex', gap: '10px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', marginTop: '5px' }}></div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'white' }}>{altRoadNameText}</span>
-                      <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#10b981' }}>{alternateTimeText}</span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>Fastest route, AI optimization suggested</span>
-                  </div>
-                </div>
-
-                {/* 2. Congested Route Option */}
-                <div style={{ display: 'flex', gap: '10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', padding: '10px 12px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', marginTop: '5px' }}></div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'rgba(255,255,255,0.8)' }}>{roadNameText}</span>
-                      <span style={{ fontWeight: 800, fontSize: '13.5px', color: '#ef4444' }}>{congestedTimeText}</span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Traffic congestion bottleneck</span>
-                  </div>
-                </div>
-
-                {/* Apply Suggestion Action trigger */}
-                <button
-                  onClick={() => {
-                    const forecastTabBtn = document.querySelector('button[class*="main-tab-btn"]') as HTMLButtonElement;
-                    if (forecastTabBtn) {
-                      // Navigate directly to trigger actions
-                      const btns = Array.from(document.querySelectorAll('button'));
-                      const triggerBtn = btns.find(b => b.textContent?.includes('Open Detailed Diagnostics'));
-                      if (triggerBtn) triggerBtn.click();
-                    }
-                  }}
-                  style={{
-                    background: 'var(--rta-blue)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '10px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  className="waze-apply-btn"
-                >
-                  <Compass size={14} /> Open Actions & Optimization
-                </button>
-
-              </div>
-            ) : (
-              // Empty State prompt
-              <div style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertCircle size={16} style={{ color: 'var(--rta-blue)', flexShrink: 0 }} />
-                <span>Select any active road hotspot pin on the map to calculate alternative AI routing detours.</span>
-              </div>
-            )}
-
-            {/* Bottom Actions Row */}
-            <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px', marginTop: '4px' }}>
-              <button 
-                onClick={handleResetView}
-                style={{
-                  flex: 1,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                <RefreshCw size={12} /> Reset View
-              </button>
-              <button 
-                onClick={handleFitHotspots}
-                style={{
-                  flex: 1,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'white',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-              >
-                Fit Hotspots
-              </button>
-            </div>
-
-          </div>
         </div>
       )}
 

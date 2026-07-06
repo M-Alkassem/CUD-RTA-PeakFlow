@@ -50,7 +50,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       {/* 2x2 Consolidated Live Telemetry Grid */}
-      <div className="hotspot-detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+      <div className="hotspot-detail-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
         
         {/* Risk Index Tile */}
         <div className="detail-card" style={{ padding: '16px', minHeight: '130px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -82,7 +82,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
           </div>
           <div style={{ width: '100%' }}>
             <div style={{ height: '4px', background: 'var(--bg-main)', borderRadius: '2px', overflow: 'hidden', marginBottom: '4px' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, selectedCorridor.vc_ratio * 100)}%`, background: selectedCorridor.vc_ratio > 0.9 ? 'var(--color-critical)' : 'var(--color-medium)' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, selectedCorridor.vc_ratio * 100)}%`, background: selectedCorridor.vc_ratio > 0.8 ? 'var(--color-critical)' : 'var(--color-medium)' }} />
             </div>
           </div>
         </div>
@@ -109,7 +109,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
               {junctionPerformance.junction_id} · {junctionPerformance.control_type}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
             
             <div style={{ background: 'var(--bg-main)', padding: '10px 8px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '64px', textAlign: 'center' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Avg Delay</span>
@@ -149,7 +149,7 @@ export const CorridorDetails: React.FC<CorridorDetailsProps> = ({
           <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-title)', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
             Creek Crossing Comparison
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
             {['GAR_N1', 'MAK_N1', 'BBC_S1'].map(locId => {
               const corRow = corridors.find(c => c.location_id === locId);
               if (!corRow) return null;

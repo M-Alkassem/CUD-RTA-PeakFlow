@@ -9,7 +9,14 @@ interface TrafficRiskTableProps {
   activeScenarioId: string;
   showTooltip: boolean;
   setShowTooltip: (show: boolean) => void;
-  getRecommendedActionForCorridor: (cor: Corridor) => { action: string; reason: string };
+  getRecommendedActionForCorridor: (cor: Corridor) => {
+    action: string;
+    congestionReducingAction: string;
+    expectedImpact: string;
+    doNothingRisk: string;
+    dataEvidence: string;
+    operatorApprovalRequired: string;
+  };
   showInfoFooter?: boolean;
 }
 
@@ -29,13 +36,13 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
       {/* Title & Help tooltip */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
         <span className="kpi-title" style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-title)' }}>
-          Top Congestion Risks (Current Hour)
+          Corridor Demand Pressure Ranking
         </span>
         <div className="helper-text" style={{ cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', color: 'var(--text-secondary)' }} onClick={() => setShowTooltip(!showTooltip)}>
-          <HelpCircle size={16} /> Congestion Weight Factors
+          <HelpCircle size={16} /> Demand Pressure Factors
           {showTooltip && (
             <div style={{ position: 'absolute', background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '16px', borderRadius: '8px', zIndex: 10, width: '260px', boxShadow: 'var(--shadow-focus)', top: '30px', right: '0px', textTransform: 'none', color: 'var(--text-primary)', fontWeight: 'normal', lineHeight: 1.5 }}>
-              <strong style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Weighted Components:</strong>
+              <strong style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>Demand Pressure Inputs:</strong>
               <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div>• 35% Volume-to-Capacity ratio</div>
                 <div>• 20% Speed drop vs limit</div>
@@ -59,7 +66,7 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
         )}
         {activeScenarioId === 'pm-peak-demo' && (
           <div className="recommend-badge" style={{ fontSize: '15px', padding: '8px 14px' }}>
-            Focus Corridor: SZR Commuter Egress
+            Focus: SZR → DIFC / Business Bay — AM Peak 08:00–09:00
           </div>
         )}
         {activeScenarioId === 'signal-delay-demo' && (
@@ -74,8 +81,8 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
         {sortedCorridors.map(cor => {
           const isSelected = selectedLocationId === cor.location_id;
           const isIncident = cor.incident_affected;
-          const isCapacity = cor.vc_ratio > 0.9;
-          const mainCause = isIncident ? 'Incident blockages' : isCapacity ? 'Volume near capacity' : 'PM Peak Commute';
+          const isCapacity = cor.vc_ratio > 0.8;
+          const mainCause = isIncident ? 'Incident blockages' : isCapacity ? 'Demand above capacity' : 'AM peak commute pressure';
           const rec = getRecommendedActionForCorridor(cor);
           
           // Estimate delay seconds from TTI realistically
@@ -124,26 +131,26 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
               {/* Volume & Delays */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flex: '1.5', justifyContent: 'center', minWidth: 0 }}>
                 <div style={{ textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>VOLUME</span>
-                  <strong style={{ fontSize: '16px', color: 'var(--text-primary)' }}>{cor.volume_vph} vph</strong>
+                  <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>DEMAND</span>
+                  <strong style={{ fontSize: '16px', color: 'var(--text-primary)' }}>{cor.demand_vph || cor.volume_vph} vph</strong>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>DELAY</span>
-                  <strong style={{ fontSize: '16px', color: 'var(--text-primary)' }}>{estimatedDelaySec}s</strong>
+                  <span style={{ display: 'block', fontSize: '12px', color: cor.vc_ratio > 0.8 ? 'var(--color-critical)' : 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>EXCESS</span>
+                  <strong style={{ fontSize: '16px', color: cor.vc_ratio > 0.8 ? 'var(--color-critical)' : 'var(--color-low)' }}>{Math.max(0, (cor.demand_vph || cor.volume_vph) - Math.round((cor.capacity_vph || 12000) * 0.80)).toLocaleString()}</strong>
                 </div>
               </div>
 
               {/* Action Recommendation */}
               <div style={{ flex: '2', paddingLeft: '24px', minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>RECOMMENDED ACTION</span>
-                <span style={{ color: 'var(--rta-blue)', fontWeight: 700, fontSize: '16px' }}>{rec.action}</span>
+                <span style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.04em' }}>SHIFT PLAN</span>
+                <span style={{ color: 'var(--rta-blue)', fontWeight: 700, fontSize: '15px' }}>{cor.vc_ratio > 0.8 ? 'Employer Flex + Metro + Parking' : cor.vc_ratio > 0.75 ? 'Light Advisory' : 'No shift needed'}</span>
               </div>
 
-              {/* Risk Score Pill & Chevron */}
+              {/* Demand Pressure Indicator & Chevron */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1', justifyContent: 'flex-end', flexShrink: 0 }}>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ 
-                    fontSize: '16px', 
+                    fontSize: '14px', 
                     fontWeight: 800, 
                     color: 'white', 
                     background: riskColor,
@@ -151,7 +158,7 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
                     borderRadius: '20px',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}>
-                    {cor.congestion_pressure_score}
+                    V/C {cor.vc_ratio.toFixed(2)}
                   </span>
                 </div>
                 <ChevronRight size={20} style={{ color: isSelected ? 'var(--rta-blue)' : 'var(--text-muted)' }} />
@@ -164,7 +171,7 @@ export const TrafficRiskTable: React.FC<TrafficRiskTableProps> = ({
 
       {showInfoFooter && (
         <div style={{ padding: '12px 0 0 0', borderTop: '1px solid var(--border-color)', fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Info size={15} /> <span>Click any corridor card row to load detailed predictive metrics on the Map or Forecast tabs.</span>
+          <Info size={15} /> <span>Click any corridor to view demand shift analysis on the Shift Planner tab.</span>
         </div>
       )}
     </div>
