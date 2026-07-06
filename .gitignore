@@ -54,3 +54,12 @@ next-env.d.ts
 *.sln
 *.sw?
 
+# AI / Editor Rules
+.clinerules
+.cursorrules
+
+# Markdown Documentation
+*.md
+**/*.md
+
+
